@@ -114,8 +114,11 @@ ALTER TABLE payment_proofs ENABLE ROW LEVEL SECURITY;
 DROP POLICY IF EXISTS "Users can view own profile" ON profiles;
 CREATE POLICY "Users can view own profile" ON profiles FOR SELECT USING (auth.uid() = id);
 
-DROP POLICY IF EXISTS "Admins can view all profiles" ON profiles;
-CREATE POLICY "Admins can view all profiles" ON profiles FOR SELECT USING (public.check_is_admin());
+DROP POLICY IF EXISTS "Users can update own profile" ON profiles;
+CREATE POLICY "Users can update own profile" ON profiles FOR UPDATE USING (auth.uid() = id);
+
+DROP POLICY IF EXISTS "Admins can manage all profiles" ON profiles;
+CREATE POLICY "Admins can manage all profiles" ON profiles FOR ALL USING (public.check_is_admin());
 
 -- Categories: Everyone can read, only admins can modify
 DROP POLICY IF EXISTS "Everyone can view categories" ON categories;
@@ -135,31 +138,39 @@ CREATE POLICY "Everyone can view product images" ON product_images FOR SELECT US
 DROP POLICY IF EXISTS "Admins can manage product images" ON product_images;
 CREATE POLICY "Admins can manage product images" ON product_images FOR ALL USING (public.check_is_admin());
 
--- Orders: Customers can view/create own, admins can view/update all
+-- Orders: Customers can view own, admins can view/update all, anyone can create
 DROP POLICY IF EXISTS "Users can view own orders" ON orders;
-CREATE POLICY "Users can view own orders" ON orders FOR SELECT USING (auth.uid() = user_id);
+CREATE POLICY "Users can view own orders" ON orders FOR SELECT USING (auth.uid() = user_id OR public.check_is_admin());
+
 DROP POLICY IF EXISTS "Users can create own orders" ON orders;
-CREATE POLICY "Users can create own orders" ON orders FOR INSERT WITH CHECK (auth.uid() = user_id);
+DROP POLICY IF EXISTS "Anyone can create orders" ON orders;
+CREATE POLICY "Anyone can create orders" ON orders FOR INSERT WITH CHECK (true);
+
 DROP POLICY IF EXISTS "Admins can manage all orders" ON orders;
 CREATE POLICY "Admins can manage all orders" ON orders FOR ALL USING (public.check_is_admin());
 
--- Order Items: Customers can view own, admins can view all
+-- Order Items: Customers can view own, admins can view all, anyone can create
 DROP POLICY IF EXISTS "Users can view own order items" ON order_items;
 CREATE POLICY "Users can view own order items" ON order_items FOR SELECT USING (
-  EXISTS (SELECT 1 FROM orders WHERE id = order_items.order_id AND user_id = auth.uid())
+  EXISTS (SELECT 1 FROM orders WHERE id = order_items.order_id AND (user_id = auth.uid() OR public.check_is_admin()))
 );
-DROP POLICY IF EXISTS "Admins can view all order items" ON order_items;
-CREATE POLICY "Admins can view all order items" ON order_items FOR SELECT USING (public.check_is_admin());
 
--- Payment Proofs: Customers can view/create own, admins can view/update all
+DROP POLICY IF EXISTS "Anyone can create order items" ON order_items;
+CREATE POLICY "Anyone can create order items" ON order_items FOR INSERT WITH CHECK (true);
+
+DROP POLICY IF EXISTS "Admins can manage all order items" ON order_items;
+CREATE POLICY "Admins can manage all order items" ON order_items FOR ALL USING (public.check_is_admin());
+
+-- Payment Proofs: Customers can view/create own, admins can view/update all, anyone can create
 DROP POLICY IF EXISTS "Users can view own payment proofs" ON payment_proofs;
 CREATE POLICY "Users can view own payment proofs" ON payment_proofs FOR SELECT USING (
-  EXISTS (SELECT 1 FROM orders WHERE id = payment_proofs.order_id AND user_id = auth.uid())
+  EXISTS (SELECT 1 FROM orders WHERE id = payment_proofs.order_id AND (user_id = auth.uid() OR public.check_is_admin()))
 );
+
 DROP POLICY IF EXISTS "Users can upload own payment proofs" ON payment_proofs;
-CREATE POLICY "Users can upload own payment proofs" ON payment_proofs FOR INSERT WITH CHECK (
-  EXISTS (SELECT 1 FROM orders WHERE id = order_id AND user_id = auth.uid())
-);
+DROP POLICY IF EXISTS "Anyone can upload payment proofs" ON payment_proofs;
+CREATE POLICY "Anyone can upload payment proofs" ON payment_proofs FOR INSERT WITH CHECK (true);
+
 DROP POLICY IF EXISTS "Admins can manage all payment proofs" ON payment_proofs;
 CREATE POLICY "Admins can manage all payment proofs" ON payment_proofs FOR ALL USING (public.check_is_admin());
 
@@ -199,25 +210,25 @@ BEGIN
     IF EXISTS (SELECT 1 FROM categories WHERE slug = 'hair-care') THEN
         INSERT INTO products (name, description, price, stock, category_id, image_url, is_featured) 
         VALUES 
-        ('Organic Shea Butter Hair Cream', 'Deeply moisturizing hair cream for natural hair growth and shine.', 4500, 50, (SELECT id FROM categories WHERE slug = 'hair-care'), 'https://picsum.photos/seed/hair1/400/400', true),
-        ('Herbal Anti-Dandruff Shampoo', 'Effective shampoo with neem and tea tree oil to combat dandruff.', 3200, 100, (SELECT id FROM categories WHERE slug = 'hair-care'), 'https://picsum.photos/seed/shampoo/400/400', true),
-        ('Deep Conditioning Treatment', 'Intensive repair for damaged hair. Restores strength and elasticity.', 6500, 40, (SELECT id FROM categories WHERE slug = 'hair-care'), 'https://picsum.photos/seed/conditioner/400/400', false)
+        ('Organic Shea Butter Hair Cream', 'Deeply moisturizing hair cream for natural hair growth and shine.', 4500, 50, (SELECT id FROM categories WHERE slug = 'hair-care'), 'https://res.cloudinary.com/dkvkgae3o/image/upload/v1773575538/sheabutter_bufdmf.png', true),
+        ('Herbal Anti-Dandruff Shampoo', 'Effective shampoo with neem and tea tree oil to combat dandruff.', 3200, 100, (SELECT id FROM categories WHERE slug = 'hair-care'), 'https://res.cloudinary.com/dkvkgae3o/image/upload/v1773575539/herbal_anti-dandruff_kumxjj.png', true),
+        ('Deep Conditioning Treatment', 'Intensive repair for damaged hair. Restores strength and elasticity.', 6500, 40, (SELECT id FROM categories WHERE slug = 'hair-care'), 'https://res.cloudinary.com/dkvkgae3o/image/upload/v1773575536/deep_conditionin_mcye4l.png', false)
         ON CONFLICT (name) DO NOTHING;
     END IF;
 
     IF EXISTS (SELECT 1 FROM categories WHERE slug = 'skin-care') THEN
         INSERT INTO products (name, description, price, stock, category_id, image_url, is_featured) 
         VALUES 
-        ('Cocoa Butter Body Lotion', 'Rich body lotion for 24-hour moisture and glowing skin.', 5800, 75, (SELECT id FROM categories WHERE slug = 'skin-care'), 'https://picsum.photos/seed/lotion/400/400', true),
-        ('Vitamin C Face Serum', 'Brightening serum with 20% Vitamin C and Hyaluronic Acid.', 9500, 60, (SELECT id FROM categories WHERE slug = 'skin-care'), 'https://picsum.photos/seed/serum/400/400', true)
+        ('Cocoa Butter Body Lotion', 'Rich body lotion for 24-hour moisture and glowing skin.', 5800, 75, (SELECT id FROM categories WHERE slug = 'skin-care'), 'https://res.cloudinary.com/dkvkgae3o/image/upload/v1773575538/cocoa_butter_h7xgo1.png', true),
+        ('Vitamin C Face Serum', 'Brightening serum with 20% Vitamin C and Hyaluronic Acid.', 9500, 60, (SELECT id FROM categories WHERE slug = 'skin-care'), 'https://res.cloudinary.com/dkvkgae3o/image/upload/v1773575543/vit_C_face_serum_bhcwi2.png', true)
         ON CONFLICT (name) DO NOTHING;
     END IF;
 
     IF EXISTS (SELECT 1 FROM categories WHERE slug = 'home-essentials') THEN
         INSERT INTO products (name, description, price, stock, category_id, image_url, is_featured) 
         VALUES 
-        ('Luxury Scented Candle', 'Hand-poured soy candle with lavender and vanilla scent.', 8500, 30, (SELECT id FROM categories WHERE slug = 'home-essentials'), 'https://picsum.photos/seed/candle/400/400', true),
-        ('Stainless Steel Water Bottle', 'Eco-friendly 1L water bottle, keeps drinks cold for 24 hours.', 12000, 25, (SELECT id FROM categories WHERE slug = 'home-essentials'), 'https://picsum.photos/seed/bottle/400/400', false)
+        ('Luxury Scented Candle', 'Hand-poured soy candle with lavender and vanilla scent.', 8500, 30, (SELECT id FROM categories WHERE slug = 'home-essentials'), 'https://res.cloudinary.com/dkvkgae3o/image/upload/v1773575540/LUXURY_SCENT_vhyt53.png', true),
+        ('Stainless Steel Water Bottle', 'Eco-friendly 1L water bottle, keeps drinks cold for 24 hours.', 12000, 25, (SELECT id FROM categories WHERE slug = 'home-essentials'), 'https://res.cloudinary.com/dkvkgae3o/image/upload/v1773575536/stainless_water_bottle_glzy9l.png', false)
         ON CONFLICT (name) DO NOTHING;
     END IF;
 END $$;
