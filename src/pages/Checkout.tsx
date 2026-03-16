@@ -2,15 +2,18 @@ import React, { useState, useEffect } from 'react';
 import { useCart } from '../context/CartContext';
 import { supabase } from '../lib/supabase';
 import { useNavigate } from 'react-router-dom';
-import { CheckCircle2, Upload, CreditCard, Truck, MapPin, ArrowRight, Loader2 } from 'lucide-react';
+import { CheckCircle2, Upload, CreditCard, Truck, MapPin, ArrowRight, Loader2, Wallet } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import toast from 'react-hot-toast';
+import { BrowserProvider, parseEther } from 'ethers';
 
 export const Checkout: React.FC = () => {
   const { cart, subtotal, clearCart } = useCart();
   const [step, setStep] = useState(1);
   const [loading, setLoading] = useState(false);
   const [user, setUser] = useState<any>(null);
+  const [paymentMethod, setPaymentMethod] = useState<'bank' | 'crypto'>('bank');
+  const [walletAddress, setWalletAddress] = useState<string | null>(null);
   const [settings, setSettings] = useState<{
     bank_details: any;
     shipping_config: any;
@@ -66,9 +69,31 @@ export const Checkout: React.FC = () => {
     }
   };
 
+  const connectWallet = async () => {
+    if (!window.ethereum) {
+      toast.error('MetaMask not found. Please install the extension.');
+      return;
+    }
+
+    try {
+      const provider = new BrowserProvider(window.ethereum);
+      const accounts = await provider.send("eth_requestAccounts", []);
+      setWalletAddress(accounts[0]);
+      toast.success('Wallet connected!');
+    } catch (error: any) {
+      console.error('Failed to connect to MetaMask:', error);
+      toast.error('Failed to connect to MetaMask. Please try again.');
+    }
+  };
+
   const handleSubmitOrder = async () => {
-    if (!paymentProof) {
+    if (paymentMethod === 'bank' && !paymentProof) {
       toast.error('Please upload your proof of payment');
+      return;
+    }
+
+    if (paymentMethod === 'crypto' && !walletAddress) {
+      toast.error('Please connect your wallet first');
       return;
     }
 
@@ -81,7 +106,9 @@ export const Checkout: React.FC = () => {
         .insert({
           user_id: user?.id,
           total_amount: subtotal + shippingFee,
-          status: 'Pending Payment Review',
+          status: paymentMethod === 'crypto' ? 'Processing' : 'Pending Payment Review',
+          payment_method: paymentMethod,
+          wallet_address: walletAddress,
           ...formData
         })
         .select()
@@ -100,25 +127,27 @@ export const Checkout: React.FC = () => {
       const { error: itemsError } = await supabase.from('order_items').insert(orderItems);
       if (itemsError) throw itemsError;
 
-      // 3. Upload Payment Proof
-      const fileExt = paymentProof.name.split('.').pop();
-      const fileName = `${order.id}-${Math.random()}.${fileExt}`;
-      const { data: uploadData, error: uploadError } = await supabase.storage
-        .from('payment-proofs')
-        .upload(fileName, paymentProof);
+      if (paymentMethod === 'bank' && paymentProof) {
+        // 3. Upload Payment Proof
+        const fileExt = paymentProof.name.split('.').pop();
+        const fileName = `${order.id}-${Math.random()}.${fileExt}`;
+        const { data: uploadData, error: uploadError } = await supabase.storage
+          .from('payment-proofs')
+          .upload(fileName, paymentProof);
 
-      if (uploadError) throw uploadError;
+        if (uploadError) throw uploadError;
 
-      // 4. Create Payment Proof Record
-      const { error: proofError } = await supabase.from('payment_proofs').insert({
-        order_id: order.id,
-        file_url: uploadData.path,
-        review_status: 'pending'
-      });
+        // 4. Create Payment Proof Record
+        const { error: proofError } = await supabase.from('payment_proofs').insert({
+          order_id: order.id,
+          file_url: uploadData.path,
+          review_status: 'pending'
+        });
 
-      if (proofError) throw proofError;
+        if (proofError) throw proofError;
+      }
 
-      toast.success('Order placed successfully! We will review your payment shortly.');
+      toast.success('Order placed successfully!');
       clearCart();
       setStep(4);
     } catch (error: any) {
@@ -260,30 +289,108 @@ export const Checkout: React.FC = () => {
                 <CreditCard className="text-orange-600" />
                 <h2>Payment Method</h2>
               </div>
-              
-              <div className="p-6 bg-orange-50 rounded-2xl border border-orange-100 space-y-4">
-                <div className="flex items-center justify-between">
-                  <h3 className="font-bold text-orange-900">Bank Transfer</h3>
-                  <div className="bg-orange-600 text-white text-[10px] font-bold px-2 py-1 rounded-full uppercase">Available</div>
-                </div>
-                <p className="text-sm text-orange-800">
-                  Please transfer the total amount to the account details below and upload your receipt in the next step.
-                </p>
-                <div className="bg-white p-4 rounded-xl border border-orange-200 space-y-2">
-                  <div className="flex justify-between text-sm">
-                    <span className="text-slate-500">Bank Name</span>
-                    <span className="font-bold text-slate-900">{settings.bank_details.bank_name}</span>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <button 
+                  onClick={() => setPaymentMethod('bank')}
+                  className={`p-4 rounded-2xl border-2 transition-all text-left ${
+                    paymentMethod === 'bank' ? 'border-orange-600 bg-orange-50' : 'border-slate-100 hover:border-slate-200'
+                  }`}
+                >
+                  <div className="flex items-center justify-between mb-2">
+                    <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${
+                      paymentMethod === 'bank' ? 'bg-orange-600 text-white' : 'bg-slate-100 text-slate-500'
+                    }`}>
+                      <CreditCard className="h-5 w-5" />
+                    </div>
+                    {paymentMethod === 'bank' && <CheckCircle2 className="h-5 w-5 text-orange-600" />}
                   </div>
-                  <div className="flex justify-between text-sm">
-                    <span className="text-slate-500">Account Name</span>
-                    <span className="font-bold text-slate-900">{settings.bank_details.account_name}</span>
+                  <h4 className="font-bold text-slate-900">Bank Transfer</h4>
+                  <p className="text-xs text-slate-500">Manual verification</p>
+                </button>
+
+                <button 
+                  onClick={() => setPaymentMethod('crypto')}
+                  className={`p-4 rounded-2xl border-2 transition-all text-left ${
+                    paymentMethod === 'crypto' ? 'border-orange-600 bg-orange-50' : 'border-slate-100 hover:border-slate-200'
+                  }`}
+                >
+                  <div className="flex items-center justify-between mb-2">
+                    <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${
+                      paymentMethod === 'crypto' ? 'bg-orange-600 text-white' : 'bg-slate-100 text-slate-500'
+                    }`}>
+                      <Wallet className="h-5 w-5" />
+                    </div>
+                    {paymentMethod === 'crypto' && <CheckCircle2 className="h-5 w-5 text-orange-600" />}
                   </div>
-                  <div className="flex justify-between text-sm">
-                    <span className="text-slate-500">Account Number</span>
-                    <span className="font-bold text-slate-900">{settings.bank_details.account_number}</span>
-                  </div>
-                </div>
+                  <h4 className="font-bold text-slate-900">MetaMask</h4>
+                  <p className="text-xs text-slate-500">Instant crypto payment</p>
+                </button>
               </div>
+              
+              {paymentMethod === 'bank' ? (
+                <div className="p-6 bg-orange-50 rounded-2xl border border-orange-100 space-y-4">
+                  <div className="flex items-center justify-between">
+                    <h3 className="font-bold text-orange-900">Bank Transfer Details</h3>
+                    <div className="bg-orange-600 text-white text-[10px] font-bold px-2 py-1 rounded-full uppercase">Available</div>
+                  </div>
+                  <p className="text-sm text-orange-800">
+                    Please transfer the total amount to the account details below and upload your receipt in the next step.
+                  </p>
+                  <div className="bg-white p-4 rounded-xl border border-orange-200 space-y-2">
+                    <div className="flex justify-between text-sm">
+                      <span className="text-slate-500">Bank Name</span>
+                      <span className="font-bold text-slate-900">{settings.bank_details.bank_name}</span>
+                    </div>
+                    <div className="flex justify-between text-sm">
+                      <span className="text-slate-500">Account Name</span>
+                      <span className="font-bold text-slate-900">{settings.bank_details.account_name}</span>
+                    </div>
+                    <div className="flex justify-between text-sm">
+                      <span className="text-slate-500">Account Number</span>
+                      <span className="font-bold text-slate-900">{settings.bank_details.account_number}</span>
+                    </div>
+                  </div>
+                </div>
+              ) : (
+                <div className="p-6 bg-slate-900 rounded-2xl border border-slate-800 space-y-4 text-white">
+                  <div className="flex items-center justify-between">
+                    <h3 className="font-bold">Crypto Payment</h3>
+                    <div className="bg-orange-600 text-white text-[10px] font-bold px-2 py-1 rounded-full uppercase">Fast</div>
+                  </div>
+                  <p className="text-sm text-slate-400">
+                    Connect your MetaMask wallet to pay instantly with ETH or stablecoins.
+                  </p>
+                  
+                  {walletAddress ? (
+                    <div className="bg-white/10 p-4 rounded-xl border border-white/10 flex items-center justify-between">
+                      <div className="flex items-center space-x-3">
+                        <div className="w-8 h-8 bg-green-500 rounded-full flex items-center justify-center">
+                          <CheckCircle2 className="h-5 w-5 text-white" />
+                        </div>
+                        <div>
+                          <p className="text-xs text-slate-400">Connected Wallet</p>
+                          <p className="text-sm font-mono font-bold">{walletAddress.slice(0, 10)}...{walletAddress.slice(-8)}</p>
+                        </div>
+                      </div>
+                      <button 
+                        onClick={() => setWalletAddress(null)}
+                        className="text-xs text-slate-400 hover:text-white underline"
+                      >
+                        Disconnect
+                      </button>
+                    </div>
+                  ) : (
+                    <button 
+                      onClick={connectWallet}
+                      className="w-full bg-orange-600 text-white py-4 rounded-xl font-bold hover:bg-orange-700 transition-all flex items-center justify-center"
+                    >
+                      <Wallet className="mr-2 h-5 w-5" />
+                      Connect MetaMask
+                    </button>
+                  )}
+                </div>
+              )}
 
               <div className="bg-slate-50 p-6 rounded-2xl space-y-3">
                 <h4 className="font-bold text-slate-900">Order Summary</h4>
@@ -311,10 +418,10 @@ export const Checkout: React.FC = () => {
                   Back
                 </button>
                 <button 
-                  onClick={() => setStep(3)}
+                  onClick={() => setStep(paymentMethod === 'crypto' ? 3 : 3)}
                   className="flex-[2] bg-slate-900 text-white py-4 rounded-2xl font-bold hover:bg-orange-600 transition-all"
                 >
-                  I've Made the Transfer
+                  {paymentMethod === 'crypto' ? 'Review & Pay' : "I've Made the Transfer"}
                 </button>
               </div>
             </div>
@@ -329,40 +436,66 @@ export const Checkout: React.FC = () => {
             exit={{ opacity: 0, x: -20 }}
             className="bg-white p-8 rounded-3xl border border-slate-100 shadow-sm space-y-6"
           >
-            <div className="flex items-center space-x-3 text-2xl font-bold text-slate-900">
-              <Upload className="text-orange-600" />
-              <h2>Upload Proof of Payment</h2>
-            </div>
+            {paymentMethod === 'bank' ? (
+              <>
+                <div className="flex items-center space-x-3 text-2xl font-bold text-slate-900">
+                  <Upload className="text-orange-600" />
+                  <h2>Upload Proof of Payment</h2>
+                </div>
 
-            <p className="text-slate-500 text-sm">
-              Please upload a screenshot or photo of your bank transfer receipt. We accept JPG, PNG, or PDF.
-            </p>
+                <p className="text-slate-500 text-sm">
+                  Please upload a screenshot or photo of your bank transfer receipt. We accept JPG, PNG, or PDF.
+                </p>
 
-            <div className="relative group">
-              <input 
-                type="file" 
-                onChange={handleFileChange}
-                accept="image/*,.pdf"
-                className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10"
-              />
-              <div className={`border-2 border-dashed rounded-3xl p-12 text-center transition-all ${
-                paymentProof ? 'border-green-500 bg-green-50' : 'border-slate-200 group-hover:border-orange-500 group-hover:bg-orange-50'
-              }`}>
-                {paymentProof ? (
-                  <div className="space-y-2">
-                    <CheckCircle2 className="h-12 w-12 text-green-500 mx-auto" />
-                    <p className="font-bold text-green-700">{paymentProof.name}</p>
-                    <button className="text-xs text-slate-500 underline">Change file</button>
+                <div className="relative group">
+                  <input 
+                    type="file" 
+                    onChange={handleFileChange}
+                    accept="image/*,.pdf"
+                    className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10"
+                  />
+                  <div className={`border-2 border-dashed rounded-3xl p-12 text-center transition-all ${
+                    paymentProof ? 'border-green-500 bg-green-50' : 'border-slate-200 group-hover:border-orange-500 group-hover:bg-orange-50'
+                  }`}>
+                    {paymentProof ? (
+                      <div className="space-y-2">
+                        <CheckCircle2 className="h-12 w-12 text-green-500 mx-auto" />
+                        <p className="font-bold text-green-700">{paymentProof.name}</p>
+                        <button className="text-xs text-slate-500 underline">Change file</button>
+                      </div>
+                    ) : (
+                      <div className="space-y-2">
+                        <Upload className="h-12 w-12 text-slate-300 mx-auto group-hover:text-orange-500" />
+                        <p className="font-bold text-slate-700">Click or drag to upload</p>
+                        <p className="text-xs text-slate-400">Max file size: 5MB</p>
+                      </div>
+                    )}
                   </div>
-                ) : (
-                  <div className="space-y-2">
-                    <Upload className="h-12 w-12 text-slate-300 mx-auto group-hover:text-orange-500" />
-                    <p className="font-bold text-slate-700">Click or drag to upload</p>
-                    <p className="text-xs text-slate-400">Max file size: 5MB</p>
+                </div>
+              </>
+            ) : (
+              <div className="space-y-6">
+                <div className="flex items-center space-x-3 text-2xl font-bold text-slate-900">
+                  <Wallet className="text-orange-600" />
+                  <h2>Confirm Crypto Payment</h2>
+                </div>
+                
+                <div className="bg-slate-50 p-6 rounded-2xl space-y-4">
+                  <div className="flex justify-between items-center">
+                    <span className="text-slate-500">Amount to Pay</span>
+                    <span className="text-2xl font-black text-orange-600">₦{(subtotal + (subtotal > settings.shipping_config.free_shipping_threshold ? 0 : settings.shipping_config.shipping_fee)).toLocaleString()}</span>
                   </div>
-                )}
+                  <div className="text-xs text-slate-400 text-center">
+                    Equivalent in ETH will be calculated at current market rate.
+                  </div>
+                </div>
+
+                <div className="p-4 bg-blue-50 text-blue-700 rounded-xl text-sm flex items-start space-x-3">
+                  <Loader2 className="h-5 w-5 mt-0.5 flex-shrink-0" />
+                  <p>By clicking "Complete Order", you will be prompted to sign a transaction in MetaMask to authorize the payment.</p>
+                </div>
               </div>
-            </div>
+            )}
 
             <div className="flex gap-4">
               <button 
@@ -373,7 +506,7 @@ export const Checkout: React.FC = () => {
               </button>
               <button 
                 onClick={handleSubmitOrder}
-                disabled={!paymentProof || loading}
+                disabled={(paymentMethod === 'bank' && !paymentProof) || (paymentMethod === 'crypto' && !walletAddress) || loading}
                 className="flex-[2] bg-orange-600 text-white py-4 rounded-2xl font-bold hover:bg-orange-700 transition-all flex items-center justify-center disabled:opacity-50"
               >
                 {loading ? <Loader2 className="animate-spin h-6 w-6" /> : 'Complete Order'}

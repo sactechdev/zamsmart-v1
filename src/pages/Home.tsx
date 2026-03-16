@@ -50,60 +50,103 @@ export const Home: React.FC = () => {
   return (
     <div className="space-y-12">
       {/* Hero Section */}
-      <section className="relative rounded-3xl overflow-hidden bg-slate-900 min-h-[400px] flex items-center">
-        <div className="absolute inset-0 z-0 opacity-40">
-          <img 
-            src="https://picsum.photos/seed/hero/1200/600" 
-            alt="Hero" 
-            className="w-full h-full object-cover"
-            referrerPolicy="no-referrer"
-          />
-          <div className="absolute inset-0 bg-gradient-to-r from-slate-900 via-slate-900/60 to-transparent"></div>
+      <section className="relative rounded-3xl overflow-hidden bg-slate-900 min-h-[500px] flex items-center">
+        <div className="absolute inset-0 z-0 opacity-20">
+          <div className="absolute inset-0 bg-gradient-to-r from-slate-900 via-slate-900/60 to-transparent z-10"></div>
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 p-4 h-full">
+            {[...Array(8)].map((_, i) => (
+              <div key={i} className="rounded-2xl overflow-hidden h-full">
+                <img 
+                  src={`https://picsum.photos/seed/product-${i}/400/400`} 
+                  alt="" 
+                  className="w-full h-full object-cover grayscale hover:grayscale-0 transition-all duration-700"
+                  referrerPolicy="no-referrer"
+                />
+              </div>
+            ))}
+          </div>
         </div>
         
-        <div className="relative z-10 px-8 md:px-16 max-w-2xl space-y-6">
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            className="inline-flex items-center space-x-2 bg-orange-600/20 text-orange-500 px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider"
-          >
-            <Zap className="h-3 w-3" />
-            <span>Flash Sale is Live</span>
-          </motion.div>
-          
-          <motion.h1
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.1 }}
-            className="text-4xl md:text-6xl font-extrabold text-white leading-tight"
-          >
-            Shop the Best <br />
-            <span className="text-orange-600 text-glow">Deals in Nigeria</span>
-          </motion.h1>
-          
-          <motion.p
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.2 }}
-            className="text-slate-300 text-lg"
-          >
-            Quality products, unbeatable prices, and lightning-fast delivery across all states.
-          </motion.p>
-          
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.3 }}
-            className="flex flex-wrap gap-4"
-          >
-            <Link to="/category/all" className="bg-orange-600 text-white px-8 py-4 rounded-2xl font-bold hover:bg-orange-700 transition-all flex items-center group">
-              Shop Now
-              <ArrowRight className="ml-2 h-5 w-5 group-hover:translate-x-1 transition-transform" />
-            </Link>
-            <button className="bg-white/10 backdrop-blur-md text-white border border-white/20 px-8 py-4 rounded-2xl font-bold hover:bg-white/20 transition-all">
-              View Offers
-            </button>
-          </motion.div>
+        <div className="relative z-10 px-8 md:px-16 w-full grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
+          <div className="space-y-6">
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="inline-flex items-center space-x-2 bg-orange-600/20 text-orange-500 px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider"
+            >
+              <Zap className="h-3 w-3" />
+              <span>Flash Sale is Live</span>
+            </motion.div>
+            
+            <motion.h1
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.1 }}
+              className="text-4xl md:text-6xl font-extrabold text-white leading-tight"
+            >
+              Shop the Best <br />
+              <span className="text-orange-600 text-glow">Deals in Nigeria</span>
+            </motion.h1>
+            
+            <motion.p
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.2 }}
+              className="text-slate-300 text-lg"
+            >
+              Quality products, unbeatable prices, and lightning-fast delivery across all states.
+            </motion.p>
+            
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.3 }}
+              className="flex flex-wrap gap-4"
+            >
+              <Link to="/category/all" className="bg-orange-600 text-white px-8 py-4 rounded-2xl font-bold hover:bg-orange-700 transition-all flex items-center group">
+                Shop Now
+                <ArrowRight className="ml-2 h-5 w-5 group-hover:translate-x-1 transition-transform" />
+              </Link>
+              <button className="bg-white/10 backdrop-blur-md text-white border border-white/20 px-8 py-4 rounded-2xl font-bold hover:bg-white/20 transition-all">
+                View Offers
+              </button>
+            </motion.div>
+          </div>
+
+          <div className="hidden lg:grid grid-cols-2 gap-4 h-[400px]">
+            {featuredProducts.slice(0, 4).map((product, i) => (
+              <motion.div
+                key={product.id}
+                initial={{ opacity: 0, scale: 0.8, y: 20 }}
+                animate={{ opacity: 1, scale: 1, y: 0 }}
+                transition={{ delay: 0.4 + (i * 0.1) }}
+                className={`rounded-3xl overflow-hidden border border-white/10 shadow-2xl ${i % 2 === 1 ? 'mt-8' : 'mb-8'}`}
+              >
+                <img 
+                  src={product.image_url} 
+                  alt={product.name} 
+                  className="w-full h-full object-cover hover:scale-110 transition-transform duration-500"
+                  referrerPolicy="no-referrer"
+                />
+              </motion.div>
+            ))}
+            {featuredProducts.length === 0 && [...Array(4)].map((_, i) => (
+              <motion.div
+                key={i}
+                initial={{ opacity: 0, scale: 0.8, y: 20 }}
+                animate={{ opacity: 1, scale: 1, y: 0 }}
+                transition={{ delay: 0.4 + (i * 0.1) }}
+                className={`rounded-3xl overflow-hidden border border-white/10 shadow-2xl bg-slate-800 ${i % 2 === 1 ? 'mt-8' : 'mb-8'}`}
+              >
+                <img 
+                  src={`https://picsum.photos/seed/prod-${i}/400/400`} 
+                  alt="" 
+                  className="w-full h-full object-cover opacity-50"
+                  referrerPolicy="no-referrer"
+                />
+              </motion.div>
+            ))}
+          </div>
         </div>
       </section>
 

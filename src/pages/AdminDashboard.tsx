@@ -6,7 +6,7 @@ import {
   TrendingUp, Clock, CheckCircle, XCircle, Eye, 
   Plus, Edit, Trash2, Search, Filter, ChevronRight,
   DollarSign, PackageCheck, AlertCircle, Settings,
-  CreditCard, MapPin, Truck
+  CreditCard, MapPin, Truck, Wallet
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import toast from 'react-hot-toast';
@@ -502,6 +502,18 @@ export const AdminDashboard: React.FC = () => {
                       </div>
                       <h4 className="text-lg font-bold text-slate-900">{order.full_name}</h4>
                       <p className="text-sm text-slate-500">{order.phone} • {order.city}, {order.state}</p>
+                      <div className="flex items-center space-x-3 mt-2">
+                        <div className="flex items-center space-x-1 text-xs font-bold text-slate-400 uppercase tracking-wider">
+                          <CreditCard className="h-3 w-3" />
+                          <span>{order.payment_method === 'crypto' ? 'MetaMask' : 'Bank Transfer'}</span>
+                        </div>
+                        {order.wallet_address && (
+                          <div className="flex items-center space-x-1 text-xs font-mono text-blue-600 bg-blue-50 px-2 py-0.5 rounded-full">
+                            <Wallet className="h-3 w-3" />
+                            <span>{order.wallet_address.slice(0, 6)}...{order.wallet_address.slice(-4)}</span>
+                          </div>
+                        )}
+                      </div>
                     </div>
                     <div className="text-right">
                       <p className="text-xl font-black text-slate-900">₦{order.total_amount.toLocaleString()}</p>

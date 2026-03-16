@@ -81,3 +81,9 @@ export interface ShippingConfig {
   free_shipping_threshold: number;
   shipping_fee: number;
 }
+
+declare global {
+  interface Window {
+    ethereum?: any;
+  }
+}
