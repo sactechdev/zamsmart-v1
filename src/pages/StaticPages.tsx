@@ -1,5 +1,6 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { HelpCircle, Truck, RefreshCw, Mail, Phone, MapPin } from 'lucide-react';
+import { supabase } from '../lib/supabase';
 
 const PageWrapper: React.FC<{ title: string; icon: React.ReactNode; children: React.ReactNode }> = ({ title, icon, children }) => (
   <div className="max-w-4xl mx-auto space-y-8 py-12">
@@ -62,25 +63,41 @@ export const ReturnsPage = () => (
   </PageWrapper>
 );
 
-export const ContactPage = () => (
-  <PageWrapper title="Contact Us" icon={<Mail className="h-6 w-6" />}>
-    <p>Have questions or need assistance? Our team is ready to help you.</p>
-    <div className="grid grid-cols-1 md:grid-cols-3 gap-8 mt-8">
-      <div className="text-center space-y-2">
-        <Phone className="h-6 w-6 mx-auto text-orange-600" />
-        <h4 className="font-bold">Phone</h4>
-        <p className="text-sm text-slate-600">+234 800 123 4567</p>
+export const ContactPage = () => {
+  const [officeInfo, setOfficeInfo] = useState({
+    address: '123 Victoria Island, Lagos, Nigeria',
+    phone: '+234 803 361 8259',
+    email: 'support@zamsmart.com'
+  });
+
+  useEffect(() => {
+    supabase.from('site_settings').select('*').eq('id', 'office_info').single().then(({ data }) => {
+      if (data) {
+        setOfficeInfo(data.value);
+      }
+    });
+  }, []);
+
+  return (
+    <PageWrapper title="Contact Us" icon={<Mail className="h-6 w-6" />}>
+      <p>Have questions or need assistance? Our team is ready to help you.</p>
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-8 mt-8">
+        <div className="text-center space-y-2">
+          <Phone className="h-6 w-6 mx-auto text-orange-600" />
+          <h4 className="font-bold">Phone</h4>
+          <p className="text-sm text-slate-600">{officeInfo.phone}</p>
+        </div>
+        <div className="text-center space-y-2">
+          <Mail className="h-6 w-6 mx-auto text-orange-600" />
+          <h4 className="font-bold">Email</h4>
+          <p className="text-sm text-slate-600">{officeInfo.email}</p>
+        </div>
+        <div className="text-center space-y-2">
+          <MapPin className="h-6 w-6 mx-auto text-orange-600" />
+          <h4 className="font-bold">Office</h4>
+          <p className="text-sm text-slate-600">{officeInfo.address}</p>
+        </div>
       </div>
-      <div className="text-center space-y-2">
-        <Mail className="h-6 w-6 mx-auto text-orange-600" />
-        <h4 className="font-bold">Email</h4>
-        <p className="text-sm text-slate-600">support@zamsmart.com</p>
-      </div>
-      <div className="text-center space-y-2">
-        <MapPin className="h-6 w-6 mx-auto text-orange-600" />
-        <h4 className="font-bold">Office</h4>
-        <p className="text-sm text-slate-600">123 Victoria Island, Lagos, Nigeria</p>
-      </div>
-    </div>
-  </PageWrapper>
-);
+    </PageWrapper>
+  );
+};

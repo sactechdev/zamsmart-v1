@@ -11,6 +11,13 @@ export const Checkout: React.FC = () => {
   const [step, setStep] = useState(1);
   const [loading, setLoading] = useState(false);
   const [user, setUser] = useState<any>(null);
+  const [settings, setSettings] = useState<{
+    bank_details: any;
+    shipping_config: any;
+  }>({
+    bank_details: { bank_name: 'GTBank', account_name: 'ZAMS Mart Limited(Saka Sheriff Alade)', account_number: '0128633561' },
+    shipping_config: { free_shipping_threshold: 50000, shipping_fee: 2500 }
+  });
   const navigate = useNavigate();
 
   const [formData, setFormData] = useState({
@@ -35,6 +42,18 @@ export const Checkout: React.FC = () => {
         }));
       }
     });
+
+    // Fetch settings
+    supabase.from('site_settings').select('*').then(({ data }) => {
+      if (data) {
+        const newSettings = { ...settings };
+        data.forEach((s: any) => {
+          if (s.id === 'bank_details') newSettings.bank_details = s.value;
+          if (s.id === 'shipping_config') newSettings.shipping_config = s.value;
+        });
+        setSettings(newSettings);
+      }
+    });
   }, []);
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
@@ -56,11 +75,12 @@ export const Checkout: React.FC = () => {
     setLoading(true);
     try {
       // 1. Create Order
+      const shippingFee = subtotal > settings.shipping_config.free_shipping_threshold ? 0 : settings.shipping_config.shipping_fee;
       const { data: order, error: orderError } = await supabase
         .from('orders')
         .insert({
           user_id: user?.id,
-          total_amount: subtotal + (subtotal > 50000 ? 0 : 2500),
+          total_amount: subtotal + shippingFee,
           status: 'Pending Payment Review',
           ...formData
         })
@@ -252,15 +272,15 @@ export const Checkout: React.FC = () => {
                 <div className="bg-white p-4 rounded-xl border border-orange-200 space-y-2">
                   <div className="flex justify-between text-sm">
                     <span className="text-slate-500">Bank Name</span>
-                    <span className="font-bold text-slate-900">GTBank</span>
+                    <span className="font-bold text-slate-900">{settings.bank_details.bank_name}</span>
                   </div>
                   <div className="flex justify-between text-sm">
                     <span className="text-slate-500">Account Name</span>
-                    <span className="font-bold text-slate-900">ZAMS Mart Limited</span>
+                    <span className="font-bold text-slate-900">{settings.bank_details.account_name}</span>
                   </div>
                   <div className="flex justify-between text-sm">
                     <span className="text-slate-500">Account Number</span>
-                    <span className="font-bold text-slate-900">0123456789</span>
+                    <span className="font-bold text-slate-900">{settings.bank_details.account_number}</span>
                   </div>
                 </div>
               </div>
@@ -274,11 +294,11 @@ export const Checkout: React.FC = () => {
                   </div>
                   <div className="flex justify-between">
                     <span className="text-slate-500">Shipping</span>
-                    <span className="font-bold">₦{(subtotal > 50000 ? 0 : 2500).toLocaleString()}</span>
+                    <span className="font-bold">₦{(subtotal > settings.shipping_config.free_shipping_threshold ? 0 : settings.shipping_config.shipping_fee).toLocaleString()}</span>
                   </div>
                   <div className="flex justify-between text-lg pt-2 border-t border-slate-200">
                     <span className="font-bold">Total to Pay</span>
-                    <span className="font-black text-orange-600">₦{(subtotal + (subtotal > 50000 ? 0 : 2500)).toLocaleString()}</span>
+                    <span className="font-black text-orange-600">₦{(subtotal + (subtotal > settings.shipping_config.free_shipping_threshold ? 0 : settings.shipping_config.shipping_fee)).toLocaleString()}</span>
                   </div>
                 </div>
               </div>

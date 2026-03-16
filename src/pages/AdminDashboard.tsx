@@ -5,14 +5,15 @@ import {
   LayoutDashboard, ShoppingBag, Package, List, Users, 
   TrendingUp, Clock, CheckCircle, XCircle, Eye, 
   Plus, Edit, Trash2, Search, Filter, ChevronRight,
-  DollarSign, PackageCheck, AlertCircle
+  DollarSign, PackageCheck, AlertCircle, Settings,
+  CreditCard, MapPin, Truck
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import toast from 'react-hot-toast';
 import { format } from 'date-fns';
 
 export const AdminDashboard: React.FC = () => {
-  const [activeTab, setActiveTab] = useState<'overview' | 'orders' | 'products' | 'categories'>('overview');
+  const [activeTab, setActiveTab] = useState<'overview' | 'orders' | 'products' | 'categories' | 'settings'>('overview');
   const [orders, setOrders] = useState<Order[]>([]);
   const [products, setProducts] = useState<Product[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
@@ -28,6 +29,16 @@ export const AdminDashboard: React.FC = () => {
     image_url: '',
     is_featured: false,
     additional_images: ['']
+  });
+
+  const [settings, setSettings] = useState<{
+    bank_details: any;
+    office_info: any;
+    shipping_config: any;
+  }>({
+    bank_details: { bank_name: '', account_name: '', account_number: '' },
+    office_info: { address: '', phone: '', email: '' },
+    shipping_config: { free_shipping_threshold: 0, shipping_fee: 0 }
   });
 
   const [stats, setStats] = useState({
@@ -91,15 +102,26 @@ export const AdminDashboard: React.FC = () => {
   const fetchData = async () => {
     setLoading(true);
     try {
-      const [ordersRes, productsRes, categoriesRes] = await Promise.all([
+      const [ordersRes, productsRes, categoriesRes, settingsRes] = await Promise.all([
         supabase.from('orders').select('*, order_items(*)').order('created_at', { ascending: false }),
         supabase.from('products').select('*, categories(*), product_images(*)').order('created_at', { ascending: false }),
-        supabase.from('categories').select('*').order('name', { ascending: true })
+        supabase.from('categories').select('*').order('name', { ascending: true }),
+        supabase.from('site_settings').select('*')
       ]);
 
       if (ordersRes.data) setOrders(ordersRes.data);
       if (productsRes.data) setProducts(productsRes.data);
       if (categoriesRes.data) setCategories(categoriesRes.data);
+      
+      if (settingsRes.data) {
+        const newSettings = { ...settings };
+        settingsRes.data.forEach((s: any) => {
+          if (s.id === 'bank_details') newSettings.bank_details = s.value;
+          if (s.id === 'office_info') newSettings.office_info = s.value;
+          if (s.id === 'shipping_config') newSettings.shipping_config = s.value;
+        });
+        setSettings(newSettings);
+      }
 
       // Calculate stats
       const sales = ordersRes.data?.reduce((acc, o) => acc + (o.status !== 'Cancelled' ? o.total_amount : 0), 0) || 0;
@@ -262,6 +284,17 @@ export const AdminDashboard: React.FC = () => {
     setShowCategoryModal(true);
   };
 
+  const handleSaveSettings = async (id: string, value: any) => {
+    try {
+      const { error } = await supabase.from('site_settings').upsert({ id, value });
+      if (error) throw error;
+      toast.success('Settings updated successfully');
+      fetchData();
+    } catch (error: any) {
+      toast.error('Failed to update settings: ' + error.message);
+    }
+  };
+
   return (
     <div className="flex flex-col md:flex-row gap-8 min-h-[80vh]">
       {/* Sidebar */}
@@ -304,6 +337,15 @@ export const AdminDashboard: React.FC = () => {
         >
           <List className="h-5 w-5" />
           <span>Categories</span>
+        </button>
+        <button 
+          onClick={() => setActiveTab('settings')}
+          className={`w-full flex items-center space-x-3 px-4 py-3 rounded-xl font-bold transition-all ${
+            activeTab === 'settings' ? 'bg-orange-600 text-white shadow-lg shadow-orange-600/20' : 'text-slate-600 hover:bg-slate-100'
+          }`}
+        >
+          <Settings className="h-5 w-5" />
+          <span>Settings</span>
         </button>
       </aside>
 
@@ -800,6 +842,152 @@ export const AdminDashboard: React.FC = () => {
                 </div>
               )}
             </AnimatePresence>
+          </div>
+        )}
+
+        {activeTab === 'settings' && (
+          <div className="space-y-8">
+            <h2 className="text-2xl font-extrabold text-slate-900">Site Settings</h2>
+
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+              {/* Bank Details */}
+              <div className="bg-white p-8 rounded-3xl border border-slate-100 shadow-sm space-y-6">
+                <div className="flex items-center space-x-3 text-xl font-bold text-slate-900">
+                  <CreditCard className="text-orange-600" />
+                  <h3>Bank Details</h3>
+                </div>
+                <div className="space-y-4">
+                  <div className="space-y-1">
+                    <label className="text-xs font-bold text-slate-700 uppercase">Bank Name</label>
+                    <input 
+                      className="w-full px-4 py-3 rounded-xl border border-slate-200 outline-none focus:ring-2 focus:ring-orange-500"
+                      value={settings.bank_details.bank_name}
+                      onChange={(e) => setSettings({
+                        ...settings, 
+                        bank_details: { ...settings.bank_details, bank_name: e.target.value }
+                      })}
+                    />
+                  </div>
+                  <div className="space-y-1">
+                    <label className="text-xs font-bold text-slate-700 uppercase">Account Name</label>
+                    <input 
+                      className="w-full px-4 py-3 rounded-xl border border-slate-200 outline-none focus:ring-2 focus:ring-orange-500"
+                      value={settings.bank_details.account_name}
+                      onChange={(e) => setSettings({
+                        ...settings, 
+                        bank_details: { ...settings.bank_details, account_name: e.target.value }
+                      })}
+                    />
+                  </div>
+                  <div className="space-y-1">
+                    <label className="text-xs font-bold text-slate-700 uppercase">Account Number</label>
+                    <input 
+                      className="w-full px-4 py-3 rounded-xl border border-slate-200 outline-none focus:ring-2 focus:ring-orange-500"
+                      value={settings.bank_details.account_number}
+                      onChange={(e) => setSettings({
+                        ...settings, 
+                        bank_details: { ...settings.bank_details, account_number: e.target.value }
+                      })}
+                    />
+                  </div>
+                  <button 
+                    onClick={() => handleSaveSettings('bank_details', settings.bank_details)}
+                    className="w-full bg-slate-900 text-white py-3 rounded-xl font-bold hover:bg-orange-600 transition-all"
+                  >
+                    Save Bank Details
+                  </button>
+                </div>
+              </div>
+
+              {/* Office Info */}
+              <div className="bg-white p-8 rounded-3xl border border-slate-100 shadow-sm space-y-6">
+                <div className="flex items-center space-x-3 text-xl font-bold text-slate-900">
+                  <MapPin className="text-orange-600" />
+                  <h3>Office Information</h3>
+                </div>
+                <div className="space-y-4">
+                  <div className="space-y-1">
+                    <label className="text-xs font-bold text-slate-700 uppercase">Address</label>
+                    <input 
+                      className="w-full px-4 py-3 rounded-xl border border-slate-200 outline-none focus:ring-2 focus:ring-orange-500"
+                      value={settings.office_info.address}
+                      onChange={(e) => setSettings({
+                        ...settings, 
+                        office_info: { ...settings.office_info, address: e.target.value }
+                      })}
+                    />
+                  </div>
+                  <div className="space-y-1">
+                    <label className="text-xs font-bold text-slate-700 uppercase">Phone</label>
+                    <input 
+                      className="w-full px-4 py-3 rounded-xl border border-slate-200 outline-none focus:ring-2 focus:ring-orange-500"
+                      value={settings.office_info.phone}
+                      onChange={(e) => setSettings({
+                        ...settings, 
+                        office_info: { ...settings.office_info, phone: e.target.value }
+                      })}
+                    />
+                  </div>
+                  <div className="space-y-1">
+                    <label className="text-xs font-bold text-slate-700 uppercase">Email</label>
+                    <input 
+                      className="w-full px-4 py-3 rounded-xl border border-slate-200 outline-none focus:ring-2 focus:ring-orange-500"
+                      value={settings.office_info.email}
+                      onChange={(e) => setSettings({
+                        ...settings, 
+                        office_info: { ...settings.office_info, email: e.target.value }
+                      })}
+                    />
+                  </div>
+                  <button 
+                    onClick={() => handleSaveSettings('office_info', settings.office_info)}
+                    className="w-full bg-slate-900 text-white py-3 rounded-xl font-bold hover:bg-orange-600 transition-all"
+                  >
+                    Save Office Info
+                  </button>
+                </div>
+              </div>
+
+              {/* Shipping & Discounts */}
+              <div className="bg-white p-8 rounded-3xl border border-slate-100 shadow-sm space-y-6">
+                <div className="flex items-center space-x-3 text-xl font-bold text-slate-900">
+                  <Truck className="text-orange-600" />
+                  <h3>Shipping & Discounts</h3>
+                </div>
+                <div className="space-y-4">
+                  <div className="space-y-1">
+                    <label className="text-xs font-bold text-slate-700 uppercase">Free Shipping Threshold (₦)</label>
+                    <input 
+                      type="number"
+                      className="w-full px-4 py-3 rounded-xl border border-slate-200 outline-none focus:ring-2 focus:ring-orange-500"
+                      value={settings.shipping_config.free_shipping_threshold}
+                      onChange={(e) => setSettings({
+                        ...settings, 
+                        shipping_config: { ...settings.shipping_config, free_shipping_threshold: Number(e.target.value) }
+                      })}
+                    />
+                  </div>
+                  <div className="space-y-1">
+                    <label className="text-xs font-bold text-slate-700 uppercase">Standard Shipping Fee (₦)</label>
+                    <input 
+                      type="number"
+                      className="w-full px-4 py-3 rounded-xl border border-slate-200 outline-none focus:ring-2 focus:ring-orange-500"
+                      value={settings.shipping_config.shipping_fee}
+                      onChange={(e) => setSettings({
+                        ...settings, 
+                        shipping_config: { ...settings.shipping_config, shipping_fee: Number(e.target.value) }
+                      })}
+                    />
+                  </div>
+                  <button 
+                    onClick={() => handleSaveSettings('shipping_config', settings.shipping_config)}
+                    className="w-full bg-slate-900 text-white py-3 rounded-xl font-bold hover:bg-orange-600 transition-all"
+                  >
+                    Save Shipping Config
+                  </button>
+                </div>
+              </div>
+            </div>
           </div>
         )}
       </main>

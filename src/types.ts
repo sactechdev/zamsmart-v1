@@ -58,3 +58,26 @@ export interface PaymentProof {
   reviewed_by?: string;
   created_at: string;
 }
+
+export interface SiteSettings {
+  id: 'bank_details' | 'office_info' | 'shipping_config';
+  value: any;
+  updated_at: string;
+}
+
+export interface BankDetails {
+  bank_name: string;
+  account_name: string;
+  account_number: string;
+}
+
+export interface OfficeInfo {
+  address: string;
+  phone: string;
+  email: string;
+}
+
+export interface ShippingConfig {
+  free_shipping_threshold: number;
+  shipping_fee: number;
+}

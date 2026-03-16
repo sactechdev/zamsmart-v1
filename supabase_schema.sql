@@ -178,6 +178,31 @@ CREATE POLICY "Admins can manage all payment proofs" ON payment_proofs FOR ALL U
 -- Bucket: payment-proofs
 -- Bucket: product-images
 
+-- 8. Site Settings Table
+CREATE TABLE IF NOT EXISTS site_settings (
+  id TEXT PRIMARY KEY,
+  value JSONB NOT NULL,
+  updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+-- Enable RLS for site_settings
+ALTER TABLE site_settings ENABLE ROW LEVEL SECURITY;
+
+-- Everyone can read site settings
+DROP POLICY IF EXISTS "Everyone can view site settings" ON site_settings;
+CREATE POLICY "Everyone can view site settings" ON site_settings FOR SELECT USING (true);
+
+-- Only admins can modify site settings
+DROP POLICY IF EXISTS "Admins can manage site settings" ON site_settings;
+CREATE POLICY "Admins can manage site settings" ON site_settings FOR ALL USING (public.check_is_admin());
+
+-- Seed initial settings
+INSERT INTO site_settings (id, value) VALUES 
+('bank_details', '{"bank_name": "GTBank", "account_name": "ZAMS Mart Limited(Saka Sheriff Alade)", "account_number": "0128633561"}'),
+('office_info', '{"address": "123 Shopping Street, Lagos, Nigeria", "phone": "+234 803 361 8259", "email": "support@zamsmart.com"}'),
+('shipping_config', '{"free_shipping_threshold": 50000, "shipping_fee": 2500}')
+ON CONFLICT (id) DO NOTHING;
+
 -- Trigger for profile creation on signup
 CREATE OR REPLACE FUNCTION public.handle_new_user()
 RETURNS trigger AS $$
