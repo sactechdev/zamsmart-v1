@@ -1,11 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
-import { ShoppingCart, User, Menu, X, Search, LogOut, ChevronDown, Wallet } from 'lucide-react';
+import { ShoppingCart, User, Menu, X, Search, LogOut, ChevronDown } from 'lucide-react';
 import { useCart } from '../context/CartContext';
 import { supabase } from '../lib/supabase';
 import { motion, AnimatePresence } from 'motion/react';
 import { Toaster, toast } from 'react-hot-toast';
-import { BrowserProvider } from 'ethers';
 
 export const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const { cart } = useCart();
@@ -13,49 +12,8 @@ export const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) =>
   const [user, setUser] = useState<any>(null);
   const [profile, setProfile] = useState<any>(null);
   const [categories, setCategories] = useState<any[]>([]);
-  const [walletAddress, setWalletAddress] = useState<string | null>(null);
-  const [isConnecting, setIsConnecting] = useState(false);
   const navigate = useNavigate();
   const location = useLocation();
-
-  useEffect(() => {
-    // Check if already connected
-    if (window.ethereum) {
-      window.ethereum.request({ method: 'eth_accounts' }).then((accounts: string[]) => {
-        if (accounts.length > 0) {
-          setWalletAddress(accounts[0]);
-        }
-      });
-
-      window.ethereum.on('accountsChanged', (accounts: string[]) => {
-        if (accounts.length > 0) {
-          setWalletAddress(accounts[0]);
-        } else {
-          setWalletAddress(null);
-        }
-      });
-    }
-  }, []);
-
-  const connectWallet = async () => {
-    if (!window.ethereum) {
-      toast.error('MetaMask not found. Please install the extension.');
-      return;
-    }
-
-    setIsConnecting(true);
-    try {
-      const provider = new BrowserProvider(window.ethereum);
-      const accounts = await provider.send("eth_requestAccounts", []);
-      setWalletAddress(accounts[0]);
-      toast.success('Wallet connected!');
-    } catch (error: any) {
-      console.error('Failed to connect to MetaMask:', error);
-      toast.error('Failed to connect to MetaMask. Please try again.');
-    } finally {
-      setIsConnecting(false);
-    }
-  };
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
@@ -128,19 +86,6 @@ export const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) =>
 
             {/* Actions */}
             <nav className="flex items-center space-x-4 sm:space-x-6">
-              <button 
-                onClick={connectWallet}
-                disabled={isConnecting}
-                className={`hidden md:flex items-center space-x-2 px-4 py-2 rounded-full text-sm font-bold transition-all ${
-                  walletAddress 
-                    ? 'bg-green-50 text-green-600 border border-green-100' 
-                    : 'bg-slate-100 text-slate-600 hover:bg-orange-50 hover:text-orange-600'
-                }`}
-              >
-                <Wallet className="h-4 w-4" />
-                <span>{walletAddress ? `${walletAddress.slice(0, 6)}...${walletAddress.slice(-4)}` : 'Connect Wallet'}</span>
-              </button>
-
               <Link to="/cart" className="relative p-2 text-slate-600 hover:text-orange-600 transition-colors">
                 <ShoppingCart className="h-6 w-6" />
                 {cartCount > 0 && (

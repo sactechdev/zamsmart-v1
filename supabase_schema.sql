@@ -77,8 +77,6 @@ CREATE TABLE IF NOT EXISTS orders (
   address TEXT NOT NULL,
   state TEXT NOT NULL,
   city TEXT NOT NULL,
-  payment_method TEXT DEFAULT 'bank',
-  wallet_address TEXT,
   created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
 
