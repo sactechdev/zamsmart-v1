@@ -239,14 +239,19 @@ ON CONFLICT (id) DO NOTHING;
 CREATE OR REPLACE FUNCTION public.handle_new_user()
 RETURNS trigger AS $$
 BEGIN
-  INSERT INTO public.profiles (id, full_name, role, business_name)
+  INSERT INTO public.profiles (id, full_name, role, business_name, business_phone)
   VALUES (
     new.id, 
     new.raw_user_meta_data->>'full_name', 
     COALESCE(new.raw_user_meta_data->>'role', 'customer'),
-    new.raw_user_meta_data->>'business_name'
+    new.raw_user_meta_data->>'business_name',
+    new.raw_user_meta_data->>'business_phone'
   )
-  ON CONFLICT (id) DO NOTHING;
+  ON CONFLICT (id) DO UPDATE SET
+    full_name = EXCLUDED.full_name,
+    role = EXCLUDED.role,
+    business_name = EXCLUDED.business_name,
+    business_phone = EXCLUDED.business_phone;
   RETURN new;
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
