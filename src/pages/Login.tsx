@@ -13,7 +13,8 @@ export const Login: React.FC = () => {
     password: '',
     full_name: '',
     role: 'customer' as 'customer' | 'merchant',
-    business_name: ''
+    business_name: '',
+    business_phone: ''
   });
   const navigate = useNavigate();
 
@@ -37,7 +38,8 @@ export const Login: React.FC = () => {
             data: {
               full_name: formData.full_name,
               role: formData.role,
-              business_name: formData.role === 'merchant' ? formData.business_name : null
+              business_name: formData.role === 'merchant' ? formData.business_name : null,
+              business_phone: formData.role === 'merchant' ? formData.business_phone : null
             }
           }
         });
@@ -111,20 +113,37 @@ export const Login: React.FC = () => {
               </div>
 
               {formData.role === 'merchant' && (
-                <div className="space-y-1">
-                  <label className="text-xs font-bold text-slate-700 uppercase tracking-wider">Business Name</label>
-                  <div className="relative">
-                    <User className="absolute left-3 top-3.5 h-4 w-4 text-slate-400" />
-                    <input
-                      type="text"
-                      required
-                      className="w-full pl-10 pr-4 py-3 bg-slate-50 border border-slate-100 rounded-xl outline-none focus:ring-2 focus:ring-orange-500 transition-all"
-                      placeholder="My Awesome Shop"
-                      value={formData.business_name}
-                      onChange={(e) => setFormData({ ...formData, business_name: e.target.value })}
-                    />
+                <>
+                  <div className="space-y-1">
+                    <label className="text-xs font-bold text-slate-700 uppercase tracking-wider">Business Name</label>
+                    <div className="relative">
+                      <User className="absolute left-3 top-3.5 h-4 w-4 text-slate-400" />
+                      <input
+                        type="text"
+                        required
+                        className="w-full pl-10 pr-4 py-3 bg-slate-50 border border-slate-100 rounded-xl outline-none focus:ring-2 focus:ring-orange-500 transition-all"
+                        placeholder="My Awesome Shop"
+                        value={formData.business_name}
+                        onChange={(e) => setFormData({ ...formData, business_name: e.target.value })}
+                      />
+                    </div>
                   </div>
-                </div>
+
+                  <div className="space-y-1">
+                    <label className="text-xs font-bold text-slate-700 uppercase tracking-wider">WhatsApp Number</label>
+                    <div className="relative">
+                      <User className="absolute left-3 top-3.5 h-4 w-4 text-slate-400" />
+                      <input
+                        type="tel"
+                        required
+                        className="w-full pl-10 pr-4 py-3 bg-slate-50 border border-slate-100 rounded-xl outline-none focus:ring-2 focus:ring-orange-500 transition-all"
+                        placeholder="+234..."
+                        value={formData.business_phone}
+                        onChange={(e) => setFormData({ ...formData, business_phone: e.target.value })}
+                      />
+                    </div>
+                  </div>
+                </>
               )}
             </>
           )}

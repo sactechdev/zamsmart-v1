@@ -13,11 +13,12 @@ import toast from 'react-hot-toast';
 import { format } from 'date-fns';
 
 export const AdminDashboard: React.FC = () => {
-  const [activeTab, setActiveTab] = useState<'overview' | 'orders' | 'products' | 'merchants' | 'categories' | 'settings' | 'payouts'>('overview');
+  const [activeTab, setActiveTab] = useState<'overview' | 'orders' | 'products' | 'merchants' | 'categories' | 'settings' | 'payouts' | 'users'>('overview');
   const [orders, setOrders] = useState<Order[]>([]);
   const [products, setProducts] = useState<Product[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
   const [merchants, setMerchants] = useState<Profile[]>([]);
+  const [users, setUsers] = useState<Profile[]>([]);
   const [payouts, setPayouts] = useState<Payout[]>([]);
   const [loading, setLoading] = useState(true);
   const [showProductModal, setShowProductModal] = useState(false);
@@ -104,13 +105,14 @@ export const AdminDashboard: React.FC = () => {
   const fetchData = async () => {
     setLoading(true);
     try {
-      const [ordersRes, productsRes, categoriesRes, settingsRes, merchantsRes, payoutsRes] = await Promise.all([
+      const [ordersRes, productsRes, categoriesRes, settingsRes, merchantsRes, payoutsRes, usersRes] = await Promise.all([
         supabase.from('orders').select('*, order_items(*)').order('created_at', { ascending: false }),
         supabase.from('products').select('*, categories(*), product_images(*), merchant:profiles(*)').order('created_at', { ascending: false }),
         supabase.from('categories').select('*').order('name', { ascending: true }),
         supabase.from('site_settings').select('*'),
         supabase.from('profiles').select('*').eq('role', 'merchant').order('created_at', { ascending: false }),
-        supabase.from('payouts').select('*, merchant:profiles(*)').order('created_at', { ascending: false })
+        supabase.from('payouts').select('*, merchant:profiles(*)').order('created_at', { ascending: false }),
+        supabase.from('profiles').select('*').order('created_at', { ascending: false })
       ]);
 
       if (ordersRes.data) setOrders(ordersRes.data);
@@ -118,6 +120,7 @@ export const AdminDashboard: React.FC = () => {
       if (categoriesRes.data) setCategories(categoriesRes.data);
       if (merchantsRes.data) setMerchants(merchantsRes.data);
       if (payoutsRes.data) setPayouts(payoutsRes.data);
+      if (usersRes.data) setUsers(usersRes.data);
       
       if (settingsRes.data) {
         const newSettings = { ...settings };
@@ -195,6 +198,24 @@ export const AdminDashboard: React.FC = () => {
 
       if (error) throw error;
       toast.success('Payout marked as paid');
+      fetchData();
+    } catch (error: any) {
+      toast.error(error.message);
+    }
+  };
+
+  const handleUpdateUserRole = async (userId: string, newRole: 'customer' | 'merchant') => {
+    try {
+      const { error } = await supabase
+        .from('profiles')
+        .update({ 
+          role: newRole,
+          merchant_status: newRole === 'merchant' ? 'verified' : null
+        })
+        .eq('id', userId);
+
+      if (error) throw error;
+      toast.success(`User role updated to ${newRole}`);
       fetchData();
     } catch (error: any) {
       toast.error(error.message);
@@ -397,6 +418,15 @@ export const AdminDashboard: React.FC = () => {
         >
           <Users className="h-5 w-5" />
           <span>Merchants</span>
+        </button>
+        <button 
+          onClick={() => setActiveTab('users')}
+          className={`w-full flex items-center space-x-3 px-4 py-3 rounded-xl font-bold transition-all ${
+            activeTab === 'users' ? 'bg-orange-600 text-white shadow-lg shadow-orange-600/20' : 'text-slate-600 hover:bg-slate-100'
+          }`}
+        >
+          <Users className="h-5 w-5" />
+          <span>Users</span>
         </button>
         <button 
           onClick={() => setActiveTab('payouts')}
@@ -1046,6 +1076,66 @@ export const AdminDashboard: React.FC = () => {
                             Mark as Paid
                           </button>
                         )}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        )}
+
+        {activeTab === 'users' && (
+          <div className="space-y-8">
+            <h2 className="text-2xl font-extrabold text-slate-900">User Management</h2>
+            
+            <div className="bg-white rounded-3xl border border-slate-100 shadow-sm overflow-hidden">
+              <table className="w-full text-left">
+                <thead className="bg-slate-50 border-b border-slate-100">
+                  <tr>
+                    <th className="px-6 py-4 text-xs font-bold text-slate-500 uppercase">User</th>
+                    <th className="px-6 py-4 text-xs font-bold text-slate-500 uppercase">Role</th>
+                    <th className="px-6 py-4 text-xs font-bold text-slate-500 uppercase">Joined</th>
+                    <th className="px-6 py-4 text-xs font-bold text-slate-500 uppercase">Actions</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-100">
+                  {users.map((user) => (
+                    <tr key={user.id} className="hover:bg-slate-50 transition-colors">
+                      <td className="px-6 py-4">
+                        <div className="font-bold text-slate-900">{user.full_name}</div>
+                        <div className="text-xs text-slate-500">{user.business_name || 'No Business'}</div>
+                      </td>
+                      <td className="px-6 py-4">
+                        <span className={`px-3 py-1 rounded-full text-[10px] font-bold uppercase ${
+                          user.role === 'admin' ? 'bg-purple-100 text-purple-700' :
+                          user.role === 'merchant' ? 'bg-blue-100 text-blue-700' :
+                          'bg-slate-100 text-slate-700'
+                        }`}>
+                          {user.role}
+                        </span>
+                      </td>
+                      <td className="px-6 py-4 text-xs text-slate-500">
+                        {format(new Date(user.created_at), 'MMM dd, yyyy')}
+                      </td>
+                      <td className="px-6 py-4">
+                        <div className="flex space-x-2">
+                          {user.role === 'customer' ? (
+                            <button 
+                              onClick={() => handleUpdateUserRole(user.id, 'merchant')}
+                              className="px-3 py-1 bg-blue-600 text-white text-[10px] font-bold rounded-lg hover:bg-blue-700 transition"
+                            >
+                              Make Merchant
+                            </button>
+                          ) : user.role === 'merchant' ? (
+                            <button 
+                              onClick={() => handleUpdateUserRole(user.id, 'customer')}
+                              className="px-3 py-1 bg-slate-900 text-white text-[10px] font-bold rounded-lg hover:bg-slate-800 transition"
+                            >
+                              Make Customer
+                            </button>
+                          ) : null}
+                        </div>
                       </td>
                     </tr>
                   ))}
