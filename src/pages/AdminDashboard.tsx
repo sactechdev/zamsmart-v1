@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { supabase } from '../lib/supabase';
-import { Order, Product, Category, PaymentProof } from '../types';
+import { Order, Product, Category, PaymentProof, Profile, Payout } from '../types';
 import { 
   LayoutDashboard, ShoppingBag, Package, List, Users, 
   TrendingUp, Clock, CheckCircle, XCircle, Eye, 
@@ -13,10 +13,12 @@ import toast from 'react-hot-toast';
 import { format } from 'date-fns';
 
 export const AdminDashboard: React.FC = () => {
-  const [activeTab, setActiveTab] = useState<'overview' | 'orders' | 'products' | 'categories' | 'settings'>('overview');
+  const [activeTab, setActiveTab] = useState<'overview' | 'orders' | 'products' | 'merchants' | 'categories' | 'settings' | 'payouts'>('overview');
   const [orders, setOrders] = useState<Order[]>([]);
   const [products, setProducts] = useState<Product[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
+  const [merchants, setMerchants] = useState<Profile[]>([]);
+  const [payouts, setPayouts] = useState<Payout[]>([]);
   const [loading, setLoading] = useState(true);
   const [showProductModal, setShowProductModal] = useState(false);
   const [editingProduct, setEditingProduct] = useState<Product | null>(null);
@@ -102,16 +104,20 @@ export const AdminDashboard: React.FC = () => {
   const fetchData = async () => {
     setLoading(true);
     try {
-      const [ordersRes, productsRes, categoriesRes, settingsRes] = await Promise.all([
+      const [ordersRes, productsRes, categoriesRes, settingsRes, merchantsRes, payoutsRes] = await Promise.all([
         supabase.from('orders').select('*, order_items(*)').order('created_at', { ascending: false }),
-        supabase.from('products').select('*, categories(*), product_images(*)').order('created_at', { ascending: false }),
+        supabase.from('products').select('*, categories(*), product_images(*), merchant:profiles(*)').order('created_at', { ascending: false }),
         supabase.from('categories').select('*').order('name', { ascending: true }),
-        supabase.from('site_settings').select('*')
+        supabase.from('site_settings').select('*'),
+        supabase.from('profiles').select('*').eq('role', 'merchant').order('created_at', { ascending: false }),
+        supabase.from('payouts').select('*, merchant:profiles(*)').order('created_at', { ascending: false })
       ]);
 
       if (ordersRes.data) setOrders(ordersRes.data);
       if (productsRes.data) setProducts(productsRes.data);
       if (categoriesRes.data) setCategories(categoriesRes.data);
+      if (merchantsRes.data) setMerchants(merchantsRes.data);
+      if (payoutsRes.data) setPayouts(payoutsRes.data);
       
       if (settingsRes.data) {
         const newSettings = { ...settings };
@@ -147,6 +153,51 @@ export const AdminDashboard: React.FC = () => {
     else {
       toast.success('Order status updated');
       fetchData();
+    }
+  };
+
+  const handleVerifyMerchant = async (merchantId: string, status: 'verified' | 'rejected') => {
+    try {
+      const { error } = await supabase
+        .from('profiles')
+        .update({ merchant_status: status })
+        .eq('id', merchantId);
+
+      if (error) throw error;
+      toast.success(`Merchant ${status}`);
+      fetchData();
+    } catch (error: any) {
+      toast.error(error.message);
+    }
+  };
+
+  const handleApproveProduct = async (productId: string, status: 'approved' | 'rejected') => {
+    try {
+      const { error } = await supabase
+        .from('products')
+        .update({ approval_status: status })
+        .eq('id', productId);
+
+      if (error) throw error;
+      toast.success(`Product ${status}`);
+      fetchData();
+    } catch (error: any) {
+      toast.error(error.message);
+    }
+  };
+
+  const handleProcessPayout = async (payoutId: string) => {
+    try {
+      const { error } = await supabase
+        .from('payouts')
+        .update({ status: 'paid' })
+        .eq('id', payoutId);
+
+      if (error) throw error;
+      toast.success('Payout marked as paid');
+      fetchData();
+    } catch (error: any) {
+      toast.error(error.message);
     }
   };
 
@@ -337,6 +388,24 @@ export const AdminDashboard: React.FC = () => {
         >
           <List className="h-5 w-5" />
           <span>Categories</span>
+        </button>
+        <button 
+          onClick={() => setActiveTab('merchants')}
+          className={`w-full flex items-center space-x-3 px-4 py-3 rounded-xl font-bold transition-all ${
+            activeTab === 'merchants' ? 'bg-orange-600 text-white shadow-lg shadow-orange-600/20' : 'text-slate-600 hover:bg-slate-100'
+          }`}
+        >
+          <Users className="h-5 w-5" />
+          <span>Merchants</span>
+        </button>
+        <button 
+          onClick={() => setActiveTab('payouts')}
+          className={`w-full flex items-center space-x-3 px-4 py-3 rounded-xl font-bold transition-all ${
+            activeTab === 'payouts' ? 'bg-orange-600 text-white shadow-lg shadow-orange-600/20' : 'text-slate-600 hover:bg-slate-100'
+          }`}
+        >
+          <DollarSign className="h-5 w-5" />
+          <span>Payouts</span>
         </button>
         <button 
           onClick={() => setActiveTab('settings')}
@@ -555,6 +624,43 @@ export const AdminDashboard: React.FC = () => {
                 <Plus className="mr-2 h-4 w-4" /> Add Product
               </button>
             </div>
+
+            {/* Approval Queue */}
+            {products.filter(p => p.approval_status === 'pending').length > 0 && (
+              <div className="bg-amber-50 border border-amber-200 p-6 rounded-3xl space-y-4">
+                <div className="flex items-center space-x-2 text-amber-800 font-bold">
+                  <Clock className="h-5 w-5" />
+                  <h3>Approval Queue ({products.filter(p => p.approval_status === 'pending').length})</h3>
+                </div>
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                  {products.filter(p => p.approval_status === 'pending').map(product => (
+                    <div key={product.id} className="bg-white p-4 rounded-2xl border border-amber-100 shadow-sm space-y-3">
+                      <div className="flex items-center space-x-3">
+                        <img src={product.image_url} alt="" className="w-12 h-12 rounded-lg object-cover" />
+                        <div>
+                          <p className="font-bold text-sm truncate w-40">{product.name}</p>
+                          <p className="text-xs text-slate-500">By: {product.merchant?.business_name || 'Admin'}</p>
+                        </div>
+                      </div>
+                      <div className="flex space-x-2">
+                        <button 
+                          onClick={() => handleApproveProduct(product.id, 'approved')}
+                          className="flex-1 bg-emerald-600 text-white py-2 rounded-lg text-xs font-bold hover:bg-emerald-700 transition"
+                        >
+                          Approve
+                        </button>
+                        <button 
+                          onClick={() => handleApproveProduct(product.id, 'rejected')}
+                          className="flex-1 bg-red-600 text-white py-2 rounded-lg text-xs font-bold hover:bg-red-700 transition"
+                        >
+                          Reject
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
 
             <div className="bg-white rounded-3xl border border-slate-100 shadow-sm overflow-hidden">
               <div className="overflow-x-auto">
@@ -842,6 +948,110 @@ export const AdminDashboard: React.FC = () => {
                 </div>
               )}
             </AnimatePresence>
+          </div>
+        )}
+
+        {activeTab === 'merchants' && (
+          <div className="space-y-8">
+            <h2 className="text-2xl font-extrabold text-slate-900">Merchant Management</h2>
+            
+            <div className="bg-white rounded-3xl border border-slate-100 shadow-sm overflow-hidden">
+              <table className="w-full text-left">
+                <thead className="bg-slate-50 border-b border-slate-100">
+                  <tr>
+                    <th className="px-6 py-4 text-xs font-bold text-slate-500 uppercase">Business</th>
+                    <th className="px-6 py-4 text-xs font-bold text-slate-500 uppercase">Owner</th>
+                    <th className="px-6 py-4 text-xs font-bold text-slate-500 uppercase">Status</th>
+                    <th className="px-6 py-4 text-xs font-bold text-slate-500 uppercase">Actions</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-100">
+                  {merchants.map((merchant) => (
+                    <tr key={merchant.id} className="hover:bg-slate-50 transition-colors">
+                      <td className="px-6 py-4">
+                        <div className="font-bold text-slate-900">{merchant.business_name}</div>
+                        <div className="text-xs text-slate-500">{merchant.business_phone}</div>
+                      </td>
+                      <td className="px-6 py-4 text-sm text-slate-600">{merchant.full_name}</td>
+                      <td className="px-6 py-4">
+                        <span className={`px-3 py-1 rounded-full text-[10px] font-bold uppercase ${
+                          merchant.merchant_status === 'verified' ? 'bg-green-100 text-green-700' :
+                          merchant.merchant_status === 'rejected' ? 'bg-red-100 text-red-700' :
+                          'bg-amber-100 text-amber-700'
+                        }`}>
+                          {merchant.merchant_status}
+                        </span>
+                      </td>
+                      <td className="px-6 py-4">
+                        {merchant.merchant_status === 'pending' && (
+                          <div className="flex space-x-2">
+                            <button 
+                              onClick={() => handleVerifyMerchant(merchant.id, 'verified')}
+                              className="p-2 bg-green-50 text-green-600 rounded-lg hover:bg-green-100 transition"
+                            >
+                              <CheckCircle className="h-4 w-4" />
+                            </button>
+                            <button 
+                              onClick={() => handleVerifyMerchant(merchant.id, 'rejected')}
+                              className="p-2 bg-red-50 text-red-600 rounded-lg hover:bg-red-100 transition"
+                            >
+                              <XCircle className="h-4 w-4" />
+                            </button>
+                          </div>
+                        )}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        )}
+
+        {activeTab === 'payouts' && (
+          <div className="space-y-8">
+            <h2 className="text-2xl font-extrabold text-slate-900">Merchant Payouts</h2>
+            
+            <div className="bg-white rounded-3xl border border-slate-100 shadow-sm overflow-hidden">
+              <table className="w-full text-left">
+                <thead className="bg-slate-50 border-b border-slate-100">
+                  <tr>
+                    <th className="px-6 py-4 text-xs font-bold text-slate-500 uppercase">Merchant</th>
+                    <th className="px-6 py-4 text-xs font-bold text-slate-500 uppercase">Amount</th>
+                    <th className="px-6 py-4 text-xs font-bold text-slate-500 uppercase">Status</th>
+                    <th className="px-6 py-4 text-xs font-bold text-slate-500 uppercase">Actions</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-100">
+                  {payouts.map((payout) => (
+                    <tr key={payout.id} className="hover:bg-slate-50 transition-colors">
+                      <td className="px-6 py-4">
+                        <div className="font-bold text-slate-900">{payout.merchant?.business_name}</div>
+                        <div className="text-xs text-slate-500">{format(new Date(payout.created_at), 'MMM dd, yyyy')}</div>
+                      </td>
+                      <td className="px-6 py-4 font-bold text-slate-900">₦{payout.amount.toLocaleString()}</td>
+                      <td className="px-6 py-4">
+                        <span className={`px-3 py-1 rounded-full text-[10px] font-bold uppercase ${
+                          payout.status === 'paid' ? 'bg-green-100 text-green-700' : 'bg-amber-100 text-amber-700'
+                        }`}>
+                          {payout.status}
+                        </span>
+                      </td>
+                      <td className="px-6 py-4">
+                        {payout.status === 'pending' && (
+                          <button 
+                            onClick={() => handleProcessPayout(payout.id)}
+                            className="bg-slate-900 text-white px-4 py-2 rounded-lg text-xs font-bold hover:bg-orange-600 transition"
+                          >
+                            Mark as Paid
+                          </button>
+                        )}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
           </div>
         )}
 

@@ -89,13 +89,29 @@ export const Checkout: React.FC = () => {
 
       if (orderError) throw orderError;
 
-      // 2. Create Order Items
-      const orderItems = cart.map(item => ({
-        order_id: order.id,
-        product_id: item.id,
-        quantity: item.quantity,
-        price: item.price
-      }));
+      // 2. Create Order Items with Commission Logic
+      const merchantIds = [...new Set(cart.map(item => item.merchant_id))];
+      const { data: merchants } = await supabase
+        .from('profiles')
+        .select('id, commission_rate')
+        .in('id', merchantIds);
+
+      const orderItems = cart.map(item => {
+        const merchant = merchants?.find(m => m.id === item.merchant_id);
+        const commissionRate = merchant?.commission_rate || 0.1; // Default 10% if not set
+        const commissionAmount = (item.price * item.quantity) * commissionRate;
+        const merchantPayoutAmount = (item.price * item.quantity) - commissionAmount;
+
+        return {
+          order_id: order.id,
+          product_id: item.id,
+          merchant_id: item.merchant_id,
+          quantity: item.quantity,
+          price: item.price,
+          commission_amount: commissionAmount,
+          merchant_payout_amount: merchantPayoutAmount
+        };
+      });
 
       const { error: itemsError } = await supabase.from('order_items').insert(orderItems);
       if (itemsError) throw itemsError;

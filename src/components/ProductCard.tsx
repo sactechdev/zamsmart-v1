@@ -51,9 +51,15 @@ export const ProductCard: React.FC<{ product: Product }> = ({ product }) => {
             <span className="text-[10px] text-slate-400 ml-1">(4.8)</span>
           </div>
           
-          <h3 className="text-sm font-semibold text-slate-900 line-clamp-2 mb-2 group-hover:text-orange-600 transition-colors h-10">
+          <h3 className="text-sm font-semibold text-slate-900 line-clamp-2 mb-1 group-hover:text-orange-600 transition-colors h-10">
             {product.name}
           </h3>
+          
+          {product.merchant && (
+            <p className="text-[10px] text-slate-500 font-medium mb-2">
+              Sold by <span className="text-orange-600">{product.merchant.business_name}</span>
+            </p>
+          )}
           
           <div className="flex items-center justify-between mt-auto">
             <div className="flex flex-col">

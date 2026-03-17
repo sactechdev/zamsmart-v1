@@ -24,7 +24,7 @@ export const ProductDetails: React.FC = () => {
       try {
         const { data, error } = await supabase
           .from('products')
-          .select('*, categories(*), product_images(image_url)')
+          .select('*, categories(*), product_images(image_url), merchant:profiles!products_merchant_id_fkey(*)')
           .eq('id', id)
           .single();
         
@@ -32,10 +32,16 @@ export const ProductDetails: React.FC = () => {
           console.error('Error fetching product:', error);
           setProduct(null);
         } else {
-          setProduct(data);
-          // Set initial selected image
-          const initialImage = data.image_url || (data.product_images?.[0]?.image_url) || 'https://picsum.photos/seed/product/800/800';
-          setSelectedImage(initialImage);
+          // Check if product is approved or if current user is the merchant
+          const { data: { user } } = await supabase.auth.getUser();
+          if (data.approval_status !== 'approved' && data.merchant_id !== user?.id) {
+            setProduct(null);
+          } else {
+            setProduct(data);
+            // Set initial selected image
+            const initialImage = data.image_url || (data.product_images?.[0]?.image_url) || 'https://picsum.photos/seed/product/800/800';
+            setSelectedImage(initialImage);
+          }
         }
       } catch (err) {
         console.error('Unexpected error:', err);
@@ -132,6 +138,11 @@ export const ProductDetails: React.FC = () => {
             <h1 className="text-3xl md:text-4xl font-extrabold text-slate-900 leading-tight">
               {product.name}
             </h1>
+            {product.merchant && (
+              <p className="text-sm text-slate-500 font-medium">
+                Sold by <span className="text-orange-600">{product.merchant.business_name}</span>
+              </p>
+            )}
           </div>
 
           <div className="flex items-baseline space-x-3">

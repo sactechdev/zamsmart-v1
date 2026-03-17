@@ -6,6 +6,7 @@ import { ProductDetails } from './pages/ProductDetails';
 import { Cart } from './pages/Cart';
 import { Checkout } from './pages/Checkout';
 import { AdminDashboard } from './pages/AdminDashboard';
+import MerchantDashboard from './pages/MerchantDashboard';
 import { Login } from './pages/Login';
 import { CategoryPage } from './pages/Category';
 import { Orders } from './pages/Orders';
@@ -14,11 +15,11 @@ import { useEffect, useState } from 'react';
 import { supabase } from './lib/supabase';
 
 function App() {
-  const [isAdmin, setIsAdmin] = useState(false);
+  const [role, setRole] = useState<'admin' | 'merchant' | 'customer' | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const checkAdmin = async () => {
+    const checkRole = async () => {
       const { data: { session } } = await supabase.auth.getSession();
       if (session?.user) {
         const { data } = await supabase
@@ -26,17 +27,17 @@ function App() {
           .select('role')
           .eq('id', session.user.id)
           .single();
-        setIsAdmin(data?.role === 'admin');
+        setRole(data?.role || 'customer');
       } else {
-        setIsAdmin(false);
+        setRole(null);
       }
       setLoading(false);
     };
 
-    checkAdmin();
+    checkRole();
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange(() => {
-      checkAdmin();
+      checkRole();
     });
 
     return () => subscription.unsubscribe();
@@ -65,8 +66,22 @@ function App() {
                   <div className="flex items-center justify-center min-h-[60vh]">
                     <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-orange-600"></div>
                   </div>
-                ) : isAdmin ? (
+                ) : role === 'admin' ? (
                   <AdminDashboard />
+                ) : (
+                  <Navigate to="/" />
+                )
+              } 
+            />
+            <Route 
+              path="/merchant" 
+              element={
+                loading ? (
+                  <div className="flex items-center justify-center min-h-[60vh]">
+                    <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-orange-600"></div>
+                  </div>
+                ) : role === 'merchant' ? (
+                  <MerchantDashboard />
                 ) : (
                   <Navigate to="/" />
                 )

@@ -16,7 +16,7 @@ export const CategoryPage: React.FC = () => {
     const fetchProducts = async () => {
       setLoading(true);
       try {
-        let query = supabase.from('products').select('*, categories(*)');
+        let query = supabase.from('products').select('*, categories(*), merchant:profiles!products_merchant_id_fkey(*)').eq('approval_status', 'approved');
         
         if (slug && slug !== 'all' && slug !== 'featured') {
           const { data: cat, error: catError } = await supabase.from('categories').select('*').eq('slug', slug).single();

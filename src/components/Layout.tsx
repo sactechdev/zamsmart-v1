@@ -106,6 +106,9 @@ export const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) =>
                     {profile?.role === 'admin' && (
                       <Link to="/admin" className="block px-4 py-2 text-sm text-slate-700 hover:bg-slate-50">Admin Dashboard</Link>
                     )}
+                    {profile?.role === 'merchant' && (
+                      <Link to="/merchant" className="block px-4 py-2 text-sm text-slate-700 hover:bg-slate-50">Merchant Dashboard</Link>
+                    )}
                     <Link to="/orders" className="block px-4 py-2 text-sm text-slate-700 hover:bg-slate-50">My Orders</Link>
                     <button onClick={handleLogout} className="w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-slate-50">Logout</button>
                   </div>

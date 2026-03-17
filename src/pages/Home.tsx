@@ -17,8 +17,8 @@ export const Home: React.FC = () => {
       setLoading(true);
       try {
         const [featuredRes, newRes, categoriesRes] = await Promise.all([
-          supabase.from('products').select('*').eq('is_featured', true).limit(8),
-          supabase.from('products').select('*').order('created_at', { ascending: false }).limit(8),
+          supabase.from('products').select('*, merchant:profiles!products_merchant_id_fkey(*)').eq('is_featured', true).eq('approval_status', 'approved').limit(8),
+          supabase.from('products').select('*, merchant:profiles!products_merchant_id_fkey(*)').eq('approval_status', 'approved').order('created_at', { ascending: false }).limit(8),
           supabase.from('categories').select('*').limit(6)
         ]);
 

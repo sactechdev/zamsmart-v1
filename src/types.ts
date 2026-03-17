@@ -1,7 +1,17 @@
+export type UserRole = 'admin' | 'customer' | 'merchant';
+export type MerchantStatus = 'pending' | 'verified' | 'rejected';
+export type ApprovalStatus = 'pending' | 'approved' | 'rejected';
+
 export interface Profile {
   id: string;
   full_name: string;
-  role: 'admin' | 'customer';
+  role: UserRole;
+  merchant_status?: MerchantStatus;
+  business_name?: string;
+  business_description?: string;
+  business_address?: string;
+  business_phone?: string;
+  commission_rate?: number;
   created_at: string;
 }
 
@@ -19,11 +29,14 @@ export interface Product {
   price: number;
   stock: number;
   category_id: string;
+  merchant_id?: string;
+  approval_status?: ApprovalStatus;
   image_url: string;
   is_featured: boolean;
   created_at: string;
   categories?: Category;
   product_images?: { image_url: string }[];
+  merchant?: Profile;
 }
 
 export interface Order {
@@ -45,9 +58,21 @@ export interface OrderItem {
   id: string;
   order_id: string;
   product_id: string;
+  merchant_id?: string;
   quantity: number;
   price: number;
+  commission_amount?: number;
+  merchant_payout_amount?: number;
   products?: Product;
+}
+
+export interface Payout {
+  id: string;
+  merchant_id: string;
+  amount: number;
+  status: 'pending' | 'paid';
+  created_at: string;
+  merchant?: Profile;
 }
 
 export interface PaymentProof {
@@ -60,7 +85,7 @@ export interface PaymentProof {
 }
 
 export interface SiteSettings {
-  id: 'bank_details' | 'office_info' | 'shipping_config';
+  id: 'bank_details' | 'office_info' | 'shipping_config' | 'marketplace_config';
   value: any;
   updated_at: string;
 }

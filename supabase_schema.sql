@@ -4,17 +4,34 @@
 CREATE TABLE IF NOT EXISTS profiles (
   id UUID REFERENCES auth.users ON DELETE CASCADE PRIMARY KEY,
   full_name TEXT,
-  role TEXT DEFAULT 'customer' CHECK (role IN ('admin', 'customer')),
+  role TEXT DEFAULT 'customer' CHECK (role IN ('admin', 'customer', 'merchant')),
+  merchant_status TEXT DEFAULT 'pending' CHECK (merchant_status IN ('pending', 'verified', 'rejected')),
+  business_name TEXT,
+  business_description TEXT,
+  business_address TEXT,
+  business_phone TEXT,
+  commission_rate NUMERIC DEFAULT 0.10, -- Default 10% commission
   created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
 
 -- Function to check if user is admin without recursion
--- SECURITY DEFINER runs with the privileges of the creator (bypass RLS)
 CREATE OR REPLACE FUNCTION public.check_is_admin()
 RETURNS BOOLEAN AS $$
 BEGIN
   RETURN (
     SELECT (role = 'admin')
+    FROM public.profiles
+    WHERE id = auth.uid()
+  );
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+
+-- Function to check if user is merchant
+CREATE OR REPLACE FUNCTION public.check_is_merchant()
+RETURNS BOOLEAN AS $$
+BEGIN
+  RETURN (
+    SELECT (role = 'merchant' AND merchant_status = 'verified')
     FROM public.profiles
     WHERE id = auth.uid()
   );
@@ -37,6 +54,8 @@ CREATE TABLE IF NOT EXISTS products (
   price NUMERIC NOT NULL,
   stock INTEGER DEFAULT 0,
   category_id UUID REFERENCES categories(id) ON DELETE SET NULL,
+  merchant_id UUID REFERENCES profiles(id) ON DELETE CASCADE,
+  approval_status TEXT DEFAULT 'pending' CHECK (approval_status IN ('pending', 'approved', 'rejected')),
   image_url TEXT,
   is_featured BOOLEAN DEFAULT false,
   created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
@@ -45,12 +64,6 @@ CREATE TABLE IF NOT EXISTS products (
 -- Ensure unique constraint on product name for idempotency
 DO $$
 BEGIN
-    -- Remove duplicates if they exist before adding the constraint
-    DELETE FROM products a
-    USING products b
-    WHERE a.id < b.id
-    AND a.name = b.name;
-
     IF NOT EXISTS (
         SELECT 1 FROM pg_constraint WHERE conname = 'products_name_key'
     ) THEN
@@ -85,11 +98,23 @@ CREATE TABLE IF NOT EXISTS order_items (
   id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
   order_id UUID REFERENCES orders(id) ON DELETE CASCADE,
   product_id UUID REFERENCES products(id) ON DELETE SET NULL,
+  merchant_id UUID REFERENCES profiles(id) ON DELETE SET NULL,
   quantity INTEGER NOT NULL,
-  price NUMERIC NOT NULL
+  price NUMERIC NOT NULL,
+  commission_amount NUMERIC DEFAULT 0,
+  merchant_payout_amount NUMERIC DEFAULT 0
 );
 
--- 7. Payment Proofs Table
+-- 7. Payouts Table
+CREATE TABLE IF NOT EXISTS payouts (
+  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+  merchant_id UUID REFERENCES profiles(id) ON DELETE CASCADE,
+  amount NUMERIC NOT NULL,
+  status TEXT DEFAULT 'pending' CHECK (status IN ('pending', 'paid')),
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+-- 8. Payment Proofs Table
 CREATE TABLE IF NOT EXISTS payment_proofs (
   id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
   order_id UUID REFERENCES orders(id) ON DELETE CASCADE,
@@ -109,6 +134,7 @@ ALTER TABLE product_images ENABLE ROW LEVEL SECURITY;
 ALTER TABLE orders ENABLE ROW LEVEL SECURITY;
 ALTER TABLE order_items ENABLE ROW LEVEL SECURITY;
 ALTER TABLE payment_proofs ENABLE ROW LEVEL SECURITY;
+ALTER TABLE payouts ENABLE ROW LEVEL SECURITY;
 
 -- Profiles: Users can read their own profile, admins can read all
 DROP POLICY IF EXISTS "Users can view own profile" ON profiles;
@@ -126,59 +152,64 @@ CREATE POLICY "Everyone can view categories" ON categories FOR SELECT USING (tru
 DROP POLICY IF EXISTS "Admins can manage categories" ON categories;
 CREATE POLICY "Admins can manage categories" ON categories FOR ALL USING (public.check_is_admin());
 
--- Products: Everyone can read, only admins can modify
-DROP POLICY IF EXISTS "Everyone can view products" ON products;
-CREATE POLICY "Everyone can view products" ON products FOR SELECT USING (true);
-DROP POLICY IF EXISTS "Admins can manage products" ON products;
-CREATE POLICY "Admins can manage products" ON products FOR ALL USING (public.check_is_admin());
+-- Products: Everyone can read approved products, merchants can manage own, admins can manage all
+DROP POLICY IF EXISTS "Everyone can view approved products" ON products;
+CREATE POLICY "Everyone can view approved products" ON products FOR SELECT USING (approval_status = 'approved' OR merchant_id = auth.uid() OR public.check_is_admin());
 
--- Product Images: Everyone can read, only admins can modify
+DROP POLICY IF EXISTS "Merchants can manage own products" ON products;
+CREATE POLICY "Merchants can manage own products" ON products FOR ALL USING (merchant_id = auth.uid() OR public.check_is_admin());
+
+-- Product Images: Everyone can read, merchants can manage own
 DROP POLICY IF EXISTS "Everyone can view product images" ON product_images;
 CREATE POLICY "Everyone can view product images" ON product_images FOR SELECT USING (true);
-DROP POLICY IF EXISTS "Admins can manage product images" ON product_images;
-CREATE POLICY "Admins can manage product images" ON product_images FOR ALL USING (public.check_is_admin());
+DROP POLICY IF EXISTS "Merchants can manage own product images" ON product_images;
+CREATE POLICY "Merchants can manage own product images" ON product_images FOR ALL USING (
+  EXISTS (SELECT 1 FROM products WHERE id = product_images.product_id AND (merchant_id = auth.uid() OR public.check_is_admin()))
+);
 
--- Orders: Customers can view own, admins can view/update all, anyone can create
+-- Orders: Customers can view own, merchants can view orders containing their products, admins can view all
 DROP POLICY IF EXISTS "Users can view own orders" ON orders;
-CREATE POLICY "Users can view own orders" ON orders FOR SELECT USING (auth.uid() = user_id OR public.check_is_admin());
+CREATE POLICY "Users can view own orders" ON orders FOR SELECT USING (
+  auth.uid() = user_id OR 
+  public.check_is_admin() OR
+  EXISTS (SELECT 1 FROM order_items WHERE order_id = orders.id AND merchant_id = auth.uid())
+);
 
-DROP POLICY IF EXISTS "Users can create own orders" ON orders;
 DROP POLICY IF EXISTS "Anyone can create orders" ON orders;
 CREATE POLICY "Anyone can create orders" ON orders FOR INSERT WITH CHECK (true);
 
 DROP POLICY IF EXISTS "Admins can manage all orders" ON orders;
 CREATE POLICY "Admins can manage all orders" ON orders FOR ALL USING (public.check_is_admin());
 
--- Order Items: Customers can view own, admins can view all, anyone can create
+-- Order Items: Customers can view own, merchants can view own, admins can view all
 DROP POLICY IF EXISTS "Users can view own order items" ON order_items;
 CREATE POLICY "Users can view own order items" ON order_items FOR SELECT USING (
-  EXISTS (SELECT 1 FROM orders WHERE id = order_items.order_id AND (user_id = auth.uid() OR public.check_is_admin()))
+  EXISTS (SELECT 1 FROM orders WHERE id = order_items.order_id AND (user_id = auth.uid() OR public.check_is_admin())) OR
+  merchant_id = auth.uid()
 );
 
 DROP POLICY IF EXISTS "Anyone can create order items" ON order_items;
 CREATE POLICY "Anyone can create order items" ON order_items FOR INSERT WITH CHECK (true);
 
-DROP POLICY IF EXISTS "Admins can manage all order items" ON order_items;
-CREATE POLICY "Admins can manage all order items" ON order_items FOR ALL USING (public.check_is_admin());
+-- Payouts: Merchants can view own, admins can manage all
+DROP POLICY IF EXISTS "Merchants can view own payouts" ON payouts;
+CREATE POLICY "Merchants can view own payouts" ON payouts FOR SELECT USING (merchant_id = auth.uid());
+DROP POLICY IF EXISTS "Admins can manage all payouts" ON payouts;
+CREATE POLICY "Admins can manage all payouts" ON payouts FOR ALL USING (public.check_is_admin());
 
--- Payment Proofs: Customers can view/create own, admins can view/update all, anyone can create
+-- Payment Proofs: Customers can view/create own, admins can view/update all
 DROP POLICY IF EXISTS "Users can view own payment proofs" ON payment_proofs;
 CREATE POLICY "Users can view own payment proofs" ON payment_proofs FOR SELECT USING (
   EXISTS (SELECT 1 FROM orders WHERE id = payment_proofs.order_id AND (user_id = auth.uid() OR public.check_is_admin()))
 );
 
-DROP POLICY IF EXISTS "Users can upload own payment proofs" ON payment_proofs;
 DROP POLICY IF EXISTS "Anyone can upload payment proofs" ON payment_proofs;
 CREATE POLICY "Anyone can upload payment proofs" ON payment_proofs FOR INSERT WITH CHECK (true);
 
 DROP POLICY IF EXISTS "Admins can manage all payment proofs" ON payment_proofs;
 CREATE POLICY "Admins can manage all payment proofs" ON payment_proofs FOR ALL USING (public.check_is_admin());
 
--- Storage Buckets (Manual setup in Supabase UI usually, but policies here)
--- Bucket: payment-proofs
--- Bucket: product-images
-
--- 8. Site Settings Table
+-- 9. Site Settings Table
 CREATE TABLE IF NOT EXISTS site_settings (
   id TEXT PRIMARY KEY,
   value JSONB NOT NULL,
@@ -200,15 +231,21 @@ CREATE POLICY "Admins can manage site settings" ON site_settings FOR ALL USING (
 INSERT INTO site_settings (id, value) VALUES 
 ('bank_details', '{"bank_name": "GTBank", "account_name": "ZAMS Mart Limited(Saka Sheriff Alade)", "account_number": "0128633561"}'),
 ('office_info', '{"address": "123 Shopping Street, Lagos, Nigeria", "phone": "+234 803 361 8259", "email": "support@zamsmart.com"}'),
-('shipping_config', '{"free_shipping_threshold": 50000, "shipping_fee": 2500}')
+('shipping_config', '{"free_shipping_threshold": 50000, "shipping_fee": 2500}'),
+('marketplace_config', '{"default_commission_rate": 0.10}')
 ON CONFLICT (id) DO NOTHING;
 
 -- Trigger for profile creation on signup
 CREATE OR REPLACE FUNCTION public.handle_new_user()
 RETURNS trigger AS $$
 BEGIN
-  INSERT INTO public.profiles (id, full_name, role)
-  VALUES (new.id, new.raw_user_meta_data->>'full_name', 'customer')
+  INSERT INTO public.profiles (id, full_name, role, business_name)
+  VALUES (
+    new.id, 
+    new.raw_user_meta_data->>'full_name', 
+    COALESCE(new.raw_user_meta_data->>'role', 'customer'),
+    new.raw_user_meta_data->>'business_name'
+  )
   ON CONFLICT (id) DO NOTHING;
   RETURN new;
 END;
