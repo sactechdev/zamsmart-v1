@@ -148,11 +148,39 @@ export const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) =>
                   <Search className="absolute left-3 top-2.5 h-4 w-4 text-slate-400" />
                 </div>
                 <div className="grid grid-cols-2 gap-4">
-                  <Link to="/category/all" className="p-3 bg-slate-50 rounded-lg text-center text-sm font-medium">All Products</Link>
+                  <Link to="/category/all" onClick={() => setIsMenuOpen(false)} className="p-3 bg-slate-50 rounded-lg text-center text-sm font-medium">All Products</Link>
                   {categories.slice(0, 3).map(cat => (
-                    <Link key={cat.id} to={`/category/${cat.slug}`} className="p-3 bg-slate-50 rounded-lg text-center text-sm font-medium">{cat.name}</Link>
+                    <Link key={cat.id} to={`/category/${cat.slug}`} onClick={() => setIsMenuOpen(false)} className="p-3 bg-slate-50 rounded-lg text-center text-sm font-medium">{cat.name}</Link>
                   ))}
                 </div>
+
+                {user ? (
+                  <div className="pt-4 border-t border-slate-100 space-y-2">
+                    <p className="text-xs font-bold text-slate-400 uppercase px-2">My Account</p>
+                    {profile?.role === 'admin' && (
+                      <Link to="/admin" onClick={() => setIsMenuOpen(false)} className="block p-3 bg-orange-50 text-orange-700 rounded-lg text-sm font-bold">Admin Dashboard</Link>
+                    )}
+                    {profile?.role === 'merchant' && (
+                      <Link to="/merchant" onClick={() => setIsMenuOpen(false)} className="block p-3 bg-emerald-50 text-emerald-700 rounded-lg text-sm font-bold">Merchant Dashboard</Link>
+                    )}
+                    <Link to="/orders" onClick={() => setIsMenuOpen(false)} className="block p-3 hover:bg-slate-50 rounded-lg text-sm font-medium">My Orders</Link>
+                    <button 
+                      onClick={() => {
+                        handleLogout();
+                        setIsMenuOpen(false);
+                      }} 
+                      className="w-full text-left p-3 text-red-600 hover:bg-red-50 rounded-lg text-sm font-medium"
+                    >
+                      Logout
+                    </button>
+                  </div>
+                ) : (
+                  <div className="pt-4 border-t border-slate-100">
+                    <Link to="/login" onClick={() => setIsMenuOpen(false)} className="block w-full py-3 bg-orange-600 text-white text-center rounded-xl font-bold">
+                      Login / Register
+                    </Link>
+                  </div>
+                )}
               </div>
             </motion.div>
           )}
@@ -197,6 +225,8 @@ export const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) =>
                 <li><Link to="/shipping" className="hover:text-white transition-colors">Shipping Info</Link></li>
                 <li><Link to="/returns" className="hover:text-white transition-colors">Returns & Refunds</Link></li>
                 <li><Link to="/contact" className="hover:text-white transition-colors">Contact Us</Link></li>
+                <li><Link to="/terms" className="hover:text-white transition-colors">Terms of Service</Link></li>
+                <li><Link to="/privacy" className="hover:text-white transition-colors">Privacy Policy</Link></li>
               </ul>
             </div>
             <div>

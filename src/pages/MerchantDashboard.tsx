@@ -155,6 +155,25 @@ export default function MerchantDashboard() {
     }
   }
 
+  async function handleUpdateProfile(e: React.FormEvent) {
+    e.preventDefault();
+    try {
+      const { error } = await supabase
+        .from('profiles')
+        .update({
+          business_description: profile?.business_description,
+          business_phone: profile?.business_phone
+        })
+        .eq('id', user?.id);
+
+      if (error) throw error;
+      toast.success('Profile updated successfully');
+      fetchMerchantData();
+    } catch (error: any) {
+      toast.error(error.message);
+    }
+  }
+
   const stats = {
     totalSales: orderItems.reduce((acc, item) => acc + (item.merchant_payout_amount || 0), 0),
     totalOrders: new Set(orderItems.map(item => item.order_id)).size,
@@ -532,51 +551,54 @@ export default function MerchantDashboard() {
           <div className="max-w-2xl space-y-8">
             <h1 className="text-2xl font-bold">Business Settings</h1>
             
-            <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-100 space-y-6">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Business Name</label>
-                <input 
-                  type="text" 
-                  value={profile?.business_name || ''} 
-                  disabled 
-                  className="w-full px-4 py-2 bg-gray-50 border border-gray-200 rounded-lg text-gray-500"
-                />
-              </div>
-              
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Business Description</label>
-                <textarea 
-                  rows={4}
-                  value={profile?.business_description || ''}
-                  className="w-full px-4 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-emerald-500 outline-none"
-                  placeholder="Tell customers about your business..."
-                />
-              </div>
-
-              <div className="grid grid-cols-2 gap-4">
+              <form onSubmit={handleUpdateProfile} className="bg-white p-6 rounded-xl shadow-sm border border-gray-100 space-y-6">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Phone Number</label>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Business Name</label>
                   <input 
                     type="text" 
-                    value={profile?.business_phone || ''}
-                    className="w-full px-4 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-emerald-500 outline-none"
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Commission Rate</label>
-                  <input 
-                    type="text" 
-                    value={`${(profile?.commission_rate || 0) * 100}%`}
-                    disabled
+                    value={profile?.business_name || ''} 
+                    disabled 
                     className="w-full px-4 py-2 bg-gray-50 border border-gray-200 rounded-lg text-gray-500"
                   />
+                  <p className="text-[10px] text-gray-400 mt-1">Contact admin to change business name</p>
                 </div>
-              </div>
+                
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Business Description</label>
+                  <textarea 
+                    rows={4}
+                    value={profile?.business_description || ''}
+                    onChange={(e) => setProfile(profile ? {...profile, business_description: e.target.value} : null)}
+                    className="w-full px-4 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-emerald-500 outline-none"
+                    placeholder="Tell customers about your business..."
+                  />
+                </div>
 
-              <button className="bg-emerald-600 text-white px-6 py-2 rounded-lg hover:bg-emerald-700 transition">
-                Save Changes
-              </button>
-            </div>
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Phone Number</label>
+                    <input 
+                      type="text" 
+                      value={profile?.business_phone || ''}
+                      onChange={(e) => setProfile(profile ? {...profile, business_phone: e.target.value} : null)}
+                      className="w-full px-4 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-emerald-500 outline-none"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Commission Rate</label>
+                    <input 
+                      type="text" 
+                      value={`${(profile?.commission_rate || 0) * 100}%`}
+                      disabled
+                      className="w-full px-4 py-2 bg-gray-50 border border-gray-200 rounded-lg text-gray-500"
+                    />
+                  </div>
+                </div>
+
+                <button type="submit" className="bg-emerald-600 text-white px-6 py-2 rounded-lg hover:bg-emerald-700 transition">
+                  Save Changes
+                </button>
+              </form>
           </div>
         )}
       </main>

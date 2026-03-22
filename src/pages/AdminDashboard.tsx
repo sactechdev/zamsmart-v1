@@ -6,7 +6,7 @@ import {
   TrendingUp, Clock, CheckCircle, XCircle, Eye, 
   Plus, Edit, Trash2, Search, Filter, ChevronRight,
   DollarSign, PackageCheck, AlertCircle, Settings,
-  CreditCard, MapPin, Truck
+  CreditCard, MapPin, Truck, FileText, ShieldCheck
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import toast from 'react-hot-toast';
@@ -38,10 +38,14 @@ export const AdminDashboard: React.FC = () => {
     bank_details: any;
     office_info: any;
     shipping_config: any;
+    terms_of_service: { content: string };
+    privacy_policy: { content: string };
   }>({
     bank_details: { bank_name: '', account_name: '', account_number: '' },
     office_info: { address: '', phone: '', email: '' },
-    shipping_config: { free_shipping_threshold: 0, shipping_fee: 0 }
+    shipping_config: { free_shipping_threshold: 0, shipping_fee: 0 },
+    terms_of_service: { content: '' },
+    privacy_policy: { content: '' }
   });
 
   const [stats, setStats] = useState({
@@ -128,6 +132,8 @@ export const AdminDashboard: React.FC = () => {
           if (s.id === 'bank_details') newSettings.bank_details = s.value;
           if (s.id === 'office_info') newSettings.office_info = s.value;
           if (s.id === 'shipping_config') newSettings.shipping_config = s.value;
+          if (s.id === 'terms_of_service') newSettings.terms_of_service = s.value;
+          if (s.id === 'privacy_policy') newSettings.privacy_policy = s.value;
         });
         setSettings(newSettings);
       }
@@ -204,18 +210,62 @@ export const AdminDashboard: React.FC = () => {
     }
   };
 
+  const [showRoleModal, setShowRoleModal] = useState(false);
+  const [roleModalData, setRoleModalData] = useState<{ userId: string; newRole: 'customer' | 'merchant' } | null>(null);
+  const [roleForm, setRoleForm] = useState({
+    business_name: '',
+    business_phone: ''
+  });
+
   const handleUpdateUserRole = async (userId: string, newRole: 'customer' | 'merchant') => {
+    if (newRole === 'merchant') {
+      setRoleModalData({ userId, newRole });
+      setRoleForm({ business_name: '', business_phone: '' });
+      setShowRoleModal(true);
+      return;
+    }
+
     try {
       const { error } = await supabase
         .from('profiles')
         .update({ 
           role: newRole,
-          merchant_status: newRole === 'merchant' ? 'verified' : null
+          merchant_status: 'pending',
+          business_name: null,
+          business_phone: null
         })
         .eq('id', userId);
 
       if (error) throw error;
       toast.success(`User role updated to ${newRole}`);
+      fetchData();
+    } catch (error: any) {
+      toast.error(error.message);
+    }
+  };
+
+  const confirmRoleUpdate = async () => {
+    if (!roleModalData) return;
+    if (!roleForm.business_name) {
+      toast.error('Business Name is required');
+      return;
+    }
+
+    try {
+      const { error } = await supabase
+        .from('profiles')
+        .update({ 
+          role: roleModalData.newRole,
+          merchant_status: 'verified',
+          business_name: roleForm.business_name,
+          business_phone: roleForm.business_phone
+        })
+        .eq('id', roleModalData.userId);
+
+      if (error) throw error;
+      toast.success(`User role updated to ${roleModalData.newRole}`);
+      setShowRoleModal(false);
+      setRoleModalData(null);
       fetchData();
     } catch (error: any) {
       toast.error(error.message);
@@ -1287,10 +1337,111 @@ export const AdminDashboard: React.FC = () => {
                   </button>
                 </div>
               </div>
+
+              {/* Terms of Service */}
+              <div className="bg-white p-8 rounded-3xl border border-slate-100 shadow-sm space-y-6 lg:col-span-2">
+                <div className="flex items-center space-x-3 text-xl font-bold text-slate-900">
+                  <FileText className="text-orange-600" />
+                  <h3>Terms of Service</h3>
+                </div>
+                <div className="space-y-4">
+                  <textarea 
+                    className="w-full px-4 py-3 rounded-xl border border-slate-200 outline-none focus:ring-2 focus:ring-orange-500 min-h-[300px]"
+                    placeholder="Enter Terms of Service content here..."
+                    value={settings.terms_of_service.content}
+                    onChange={(e) => setSettings({
+                      ...settings, 
+                      terms_of_service: { content: e.target.value }
+                    })}
+                  />
+                  <button 
+                    onClick={() => handleSaveSettings('terms_of_service', settings.terms_of_service)}
+                    className="w-full bg-slate-900 text-white py-3 rounded-xl font-bold hover:bg-orange-600 transition-all"
+                  >
+                    Save Terms of Service
+                  </button>
+                </div>
+              </div>
+
+              {/* Privacy Policy */}
+              <div className="bg-white p-8 rounded-3xl border border-slate-100 shadow-sm space-y-6 lg:col-span-2">
+                <div className="flex items-center space-x-3 text-xl font-bold text-slate-900">
+                  <ShieldCheck className="text-orange-600" />
+                  <h3>Privacy Policy</h3>
+                </div>
+                <div className="space-y-4">
+                  <textarea 
+                    className="w-full px-4 py-3 rounded-xl border border-slate-200 outline-none focus:ring-2 focus:ring-orange-500 min-h-[300px]"
+                    placeholder="Enter Privacy Policy content here..."
+                    value={settings.privacy_policy.content}
+                    onChange={(e) => setSettings({
+                      ...settings, 
+                      privacy_policy: { content: e.target.value }
+                    })}
+                  />
+                  <button 
+                    onClick={() => handleSaveSettings('privacy_policy', settings.privacy_policy)}
+                    className="w-full bg-slate-900 text-white py-3 rounded-xl font-bold hover:bg-orange-600 transition-all"
+                  >
+                    Save Privacy Policy
+                  </button>
+                </div>
+              </div>
             </div>
           </div>
         )}
       </main>
+      {/* Role Update Modal */}
+      <AnimatePresence>
+        {showRoleModal && (
+          <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-[60] p-4">
+            <motion.div 
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.95 }}
+              className="bg-white rounded-3xl max-w-md w-full p-8 shadow-2xl"
+            >
+              <h2 className="text-2xl font-extrabold text-slate-900 mb-6">Promote to Merchant</h2>
+              <div className="space-y-4">
+                <div>
+                  <label className="block text-xs font-bold text-slate-500 uppercase mb-2">Business Name *</label>
+                  <input
+                    type="text"
+                    value={roleForm.business_name}
+                    onChange={(e) => setRoleForm({ ...roleForm, business_name: e.target.value })}
+                    className="w-full px-4 py-3 bg-slate-50 border border-slate-100 rounded-xl focus:ring-2 focus:ring-orange-500 outline-none transition"
+                    placeholder="e.g. Saka Electronics"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-bold text-slate-500 uppercase mb-2">WhatsApp Number</label>
+                  <input
+                    type="text"
+                    value={roleForm.business_phone}
+                    onChange={(e) => setRoleForm({ ...roleForm, business_phone: e.target.value })}
+                    className="w-full px-4 py-3 bg-slate-50 border border-slate-100 rounded-xl focus:ring-2 focus:ring-orange-500 outline-none transition"
+                    placeholder="e.g. +234 803..."
+                  />
+                </div>
+              </div>
+              <div className="flex space-x-3 mt-8">
+                <button
+                  onClick={() => setShowRoleModal(false)}
+                  className="flex-1 px-6 py-3 bg-slate-100 text-slate-600 rounded-xl font-bold hover:bg-slate-200 transition"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={confirmRoleUpdate}
+                  className="flex-1 px-6 py-3 bg-orange-600 text-white rounded-xl font-bold hover:bg-orange-700 transition shadow-lg shadow-orange-200"
+                >
+                  Confirm
+                </button>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
     </div>
   );
 };

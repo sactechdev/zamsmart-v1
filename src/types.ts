@@ -85,9 +85,13 @@ export interface PaymentProof {
 }
 
 export interface SiteSettings {
-  id: 'bank_details' | 'office_info' | 'shipping_config' | 'marketplace_config';
+  id: 'bank_details' | 'office_info' | 'shipping_config' | 'marketplace_config' | 'terms_of_service' | 'privacy_policy';
   value: any;
   updated_at: string;
+}
+
+export interface LegalContent {
+  content: string;
 }
 
 export interface BankDetails {

@@ -11,6 +11,8 @@ import { Login } from './pages/Login';
 import { CategoryPage } from './pages/Category';
 import { Orders } from './pages/Orders';
 import { HelpPage, ShippingPage, ReturnsPage, ContactPage } from './pages/StaticPages';
+import { TermsOfService } from './pages/TermsOfService';
+import { PrivacyPolicy } from './pages/PrivacyPolicy';
 import { useEffect, useState } from 'react';
 import { supabase } from './lib/supabase';
 
@@ -59,6 +61,8 @@ function App() {
             <Route path="/shipping" element={<ShippingPage />} />
             <Route path="/returns" element={<ReturnsPage />} />
             <Route path="/contact" element={<ContactPage />} />
+            <Route path="/terms" element={<TermsOfService />} />
+            <Route path="/privacy" element={<PrivacyPolicy />} />
             <Route 
               path="/admin" 
               element={

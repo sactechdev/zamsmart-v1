@@ -232,7 +232,9 @@ INSERT INTO site_settings (id, value) VALUES
 ('bank_details', '{"bank_name": "GTBank", "account_name": "ZAMS Mart Limited(Saka Sheriff Alade)", "account_number": "0128633561"}'),
 ('office_info', '{"address": "123 Shopping Street, Lagos, Nigeria", "phone": "+234 803 361 8259", "email": "support@zamsmart.com"}'),
 ('shipping_config', '{"free_shipping_threshold": 50000, "shipping_fee": 2500}'),
-('marketplace_config', '{"default_commission_rate": 0.10}')
+('marketplace_config', '{"default_commission_rate": 0.10}'),
+('terms_of_service', '{"content": ""}'),
+('privacy_policy', '{"content": ""}')
 ON CONFLICT (id) DO NOTHING;
 
 -- Trigger for profile creation on signup
