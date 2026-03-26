@@ -228,9 +228,9 @@ export default function MerchantDashboard() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 flex">
-      {/* Sidebar */}
-      <aside className="w-64 bg-white border-r border-gray-200 hidden md:flex flex-col">
+    <div className="min-h-screen bg-gray-50 flex flex-col md:flex-row">
+      {/* Sidebar - Desktop */}
+      <aside className="w-64 bg-white border-r border-gray-200 hidden md:flex flex-col sticky top-0 h-screen">
         <div className="p-6 border-b border-gray-200">
           <h2 className="text-xl font-bold text-emerald-600">Merchant Hub</h2>
           <p className="text-sm text-gray-500 truncate">{profile?.business_name}</p>
@@ -300,7 +300,66 @@ export default function MerchantDashboard() {
       </aside>
 
       {/* Main Content */}
-      <main className="flex-1 p-8 overflow-y-auto">
+      <main className="flex-1 p-4 md:p-8 overflow-y-auto">
+        {/* Mobile Header & Navigation */}
+        <div className="md:hidden mb-6">
+          <div className="flex items-center justify-between mb-4">
+            <div>
+              <h2 className="text-xl font-bold text-emerald-600">Merchant Hub</h2>
+              <p className="text-xs text-gray-500">{profile?.business_name}</p>
+            </div>
+          </div>
+          
+          <div className="-mx-4 px-4 overflow-x-auto no-scrollbar">
+            <div className="flex space-x-2 min-w-max pb-2">
+              <button
+                onClick={() => setActiveTab('overview')}
+                className={`flex items-center space-x-2 px-4 py-2 rounded-full text-sm font-bold transition ${
+                  activeTab === 'overview' ? 'bg-emerald-600 text-white shadow-md shadow-emerald-100' : 'bg-white text-gray-600 border border-gray-200'
+                }`}
+              >
+                <LayoutDashboard className="w-4 h-4" />
+                <span>Overview</span>
+              </button>
+              <button
+                onClick={() => setActiveTab('products')}
+                className={`flex items-center space-x-2 px-4 py-2 rounded-full text-sm font-bold transition ${
+                  activeTab === 'products' ? 'bg-emerald-600 text-white shadow-md shadow-emerald-100' : 'bg-white text-gray-600 border border-gray-200'
+                }`}
+              >
+                <Package className="w-4 h-4" />
+                <span>Products</span>
+              </button>
+              <button
+                onClick={() => setActiveTab('orders')}
+                className={`flex items-center space-x-2 px-4 py-2 rounded-full text-sm font-bold transition ${
+                  activeTab === 'orders' ? 'bg-emerald-600 text-white shadow-md shadow-emerald-100' : 'bg-white text-gray-600 border border-gray-200'
+                }`}
+              >
+                <TrendingUp className="w-4 h-4" />
+                <span>Sales</span>
+              </button>
+              <button
+                onClick={() => setActiveTab('payouts')}
+                className={`flex items-center space-x-2 px-4 py-2 rounded-full text-sm font-bold transition ${
+                  activeTab === 'payouts' ? 'bg-emerald-600 text-white shadow-md shadow-emerald-100' : 'bg-white text-gray-600 border border-gray-200'
+                }`}
+              >
+                <DollarSign className="w-4 h-4" />
+                <span>Payouts</span>
+              </button>
+              <button
+                onClick={() => setActiveTab('settings')}
+                className={`flex items-center space-x-2 px-4 py-2 rounded-full text-sm font-bold transition ${
+                  activeTab === 'settings' ? 'bg-emerald-600 text-white shadow-md shadow-emerald-100' : 'bg-white text-gray-600 border border-gray-200'
+                }`}
+              >
+                <Settings className="w-4 h-4" />
+                <span>Settings</span>
+              </button>
+            </div>
+          </div>
+        </div>
         {activeTab === 'overview' && (
           <div className="space-y-8">
             <div className="flex justify-between items-center">

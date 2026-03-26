@@ -419,8 +419,8 @@ export const AdminDashboard: React.FC = () => {
 
   return (
     <div className="flex flex-col md:flex-row gap-8 min-h-[80vh]">
-      {/* Sidebar */}
-      <aside className="w-full md:w-64 space-y-2">
+      {/* Sidebar - Desktop */}
+      <aside className="hidden md:flex w-64 flex-col space-y-2 sticky top-24 h-fit">
         <button 
           onClick={() => setActiveTab('overview')}
           className={`w-full flex items-center space-x-3 px-4 py-3 rounded-xl font-bold transition-all ${
@@ -497,6 +497,90 @@ export const AdminDashboard: React.FC = () => {
           <span>Settings</span>
         </button>
       </aside>
+
+      {/* Mobile Header & Navigation */}
+      <div className="md:hidden mb-6">
+        <div className="flex items-center justify-between mb-4">
+          <h2 className="text-xl font-bold text-orange-600">Admin Panel</h2>
+        </div>
+        
+        <div className="-mx-4 px-4 overflow-x-auto no-scrollbar">
+          <div className="flex space-x-2 min-w-max pb-2">
+            <button 
+              onClick={() => setActiveTab('overview')}
+              className={`flex items-center space-x-2 px-4 py-2 rounded-full font-bold text-sm transition-all ${
+                activeTab === 'overview' ? 'bg-orange-600 text-white shadow-md shadow-orange-600/20' : 'bg-white text-slate-600 border border-slate-100'
+              }`}
+            >
+              <LayoutDashboard className="h-4 w-4" />
+              <span>Overview</span>
+            </button>
+            <button 
+              onClick={() => setActiveTab('orders')}
+              className={`flex items-center space-x-2 px-4 py-2 rounded-full font-bold text-sm transition-all ${
+                activeTab === 'orders' ? 'bg-orange-600 text-white shadow-md shadow-orange-600/20' : 'bg-white text-slate-600 border border-slate-100'
+              }`}
+            >
+              <ShoppingBag className="h-4 w-4" />
+              <span>Orders</span>
+            </button>
+            <button 
+              onClick={() => setActiveTab('products')}
+              className={`flex items-center space-x-2 px-4 py-2 rounded-full font-bold text-sm transition-all ${
+                activeTab === 'products' ? 'bg-orange-600 text-white shadow-md shadow-orange-600/20' : 'bg-white text-slate-600 border border-slate-100'
+              }`}
+            >
+              <Package className="h-4 w-4" />
+              <span>Products</span>
+            </button>
+            <button 
+              onClick={() => setActiveTab('categories')}
+              className={`flex items-center space-x-2 px-4 py-2 rounded-full font-bold text-sm transition-all ${
+                activeTab === 'categories' ? 'bg-orange-600 text-white shadow-md shadow-orange-600/20' : 'bg-white text-slate-600 border border-slate-100'
+              }`}
+            >
+              <List className="h-4 w-4" />
+              <span>Categories</span>
+            </button>
+            <button 
+              onClick={() => setActiveTab('merchants')}
+              className={`flex items-center space-x-2 px-4 py-2 rounded-full font-bold text-sm transition-all ${
+                activeTab === 'merchants' ? 'bg-orange-600 text-white shadow-md shadow-orange-600/20' : 'bg-white text-slate-600 border border-slate-100'
+              }`}
+            >
+              <Users className="h-4 w-4" />
+              <span>Merchants</span>
+            </button>
+            <button 
+              onClick={() => setActiveTab('users')}
+              className={`flex items-center space-x-2 px-4 py-2 rounded-full font-bold text-sm transition-all ${
+                activeTab === 'users' ? 'bg-orange-600 text-white shadow-md shadow-orange-600/20' : 'bg-white text-slate-600 border border-slate-100'
+              }`}
+            >
+              <Users className="h-4 w-4" />
+              <span>Users</span>
+            </button>
+            <button 
+              onClick={() => setActiveTab('payouts')}
+              className={`flex items-center space-x-2 px-4 py-2 rounded-full font-bold text-sm transition-all ${
+                activeTab === 'payouts' ? 'bg-orange-600 text-white shadow-md shadow-orange-600/20' : 'bg-white text-slate-600 border border-slate-100'
+              }`}
+            >
+              <DollarSign className="h-4 w-4" />
+              <span>Payouts</span>
+            </button>
+            <button 
+              onClick={() => setActiveTab('settings')}
+              className={`flex items-center space-x-2 px-4 py-2 rounded-full font-bold text-sm transition-all ${
+                activeTab === 'settings' ? 'bg-orange-600 text-white shadow-md shadow-orange-600/20' : 'bg-white text-slate-600 border border-slate-100'
+              }`}
+            >
+              <Settings className="h-4 w-4" />
+              <span>Settings</span>
+            </button>
+          </div>
+        </div>
+      </div>
 
       {/* Main Content */}
       <main className="flex-1 space-y-8">
