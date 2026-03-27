@@ -116,3 +116,28 @@ export interface ShippingConfig {
   free_shipping_threshold: number;
   shipping_fee: number;
 }
+
+export interface ShippingZone {
+  id: string;
+  name: string;
+  estimated_days_min: number;
+  estimated_days_max: number;
+  created_at: string;
+}
+
+export interface ShippingState {
+  id: string;
+  state_name: string;
+  zone_id: string;
+  created_at: string;
+  shipping_zones?: ShippingZone;
+}
+
+export interface ShippingRate {
+  id: string;
+  zone_id: string;
+  min_weight_kg: number;
+  max_weight_kg: number;
+  base_fee: number;
+  created_at: string;
+}

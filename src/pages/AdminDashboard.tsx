@@ -15,13 +15,16 @@ import { format } from 'date-fns';
 import { removeBackground } from '../lib/gemini';
 
 export const AdminDashboard: React.FC = () => {
-  const [activeTab, setActiveTab] = useState<'overview' | 'orders' | 'products' | 'merchants' | 'categories' | 'settings' | 'payouts' | 'users'>('overview');
+  const [activeTab, setActiveTab] = useState<'overview' | 'orders' | 'products' | 'merchants' | 'categories' | 'settings' | 'payouts' | 'users' | 'shipping'>('overview');
   const [orders, setOrders] = useState<Order[]>([]);
   const [products, setProducts] = useState<Product[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
   const [merchants, setMerchants] = useState<Profile[]>([]);
   const [users, setUsers] = useState<Profile[]>([]);
   const [payouts, setPayouts] = useState<Payout[]>([]);
+  const [shippingZones, setShippingZones] = useState<ShippingZone[]>([]);
+  const [shippingStates, setShippingStates] = useState<ShippingState[]>([]);
+  const [shippingRates, setShippingRates] = useState<ShippingRate[]>([]);
   const [loading, setLoading] = useState(true);
   const [showProductModal, setShowProductModal] = useState(false);
   const [editingProduct, setEditingProduct] = useState<Product | null>(null);
@@ -142,14 +145,17 @@ export const AdminDashboard: React.FC = () => {
   const fetchData = async () => {
     setLoading(true);
     try {
-      const [ordersRes, productsRes, categoriesRes, settingsRes, merchantsRes, payoutsRes, usersRes] = await Promise.all([
+      const [ordersRes, productsRes, categoriesRes, settingsRes, merchantsRes, payoutsRes, usersRes, zonesRes, statesRes, ratesRes] = await Promise.all([
         supabase.from('orders').select('*, order_items(*)').order('created_at', { ascending: false }),
         supabase.from('products').select('*, categories(*), product_images(*), merchant:profiles(*)').order('created_at', { ascending: false }),
         supabase.from('categories').select('*').order('name', { ascending: true }),
         supabase.from('site_settings').select('*'),
         supabase.from('profiles').select('*').eq('role', 'merchant').order('created_at', { ascending: false }),
         supabase.from('payouts').select('*, merchant:profiles(*)').order('created_at', { ascending: false }),
-        supabase.from('profiles').select('*').order('created_at', { ascending: false })
+        supabase.from('profiles').select('*').order('created_at', { ascending: false }),
+        supabase.from('shipping_zones').select('*').order('name', { ascending: true }),
+        supabase.from('shipping_states').select('*, shipping_zones(*)').order('state_name', { ascending: true }),
+        supabase.from('shipping_rates').select('*').order('min_weight_kg', { ascending: true })
       ]);
 
       if (ordersRes.data) setOrders(ordersRes.data);
@@ -158,6 +164,9 @@ export const AdminDashboard: React.FC = () => {
       if (merchantsRes.data) setMerchants(merchantsRes.data);
       if (payoutsRes.data) setPayouts(payoutsRes.data);
       if (usersRes.data) setUsers(usersRes.data);
+      if (zonesRes.data) setShippingZones(zonesRes.data);
+      if (statesRes.data) setShippingStates(statesRes.data);
+      if (ratesRes.data) setShippingRates(ratesRes.data);
       
       if (settingsRes.data) {
         const newSettings = { ...settings };
@@ -534,6 +543,15 @@ export const AdminDashboard: React.FC = () => {
           <span>Payouts</span>
         </button>
         <button 
+          onClick={() => setActiveTab('shipping')}
+          className={`w-full flex items-center space-x-3 px-4 py-3 rounded-xl font-bold transition-all ${
+            activeTab === 'shipping' ? 'bg-orange-600 text-white shadow-lg shadow-orange-600/20' : 'text-slate-600 hover:bg-slate-100'
+          }`}
+        >
+          <Truck className="h-5 w-5" />
+          <span>Shipping</span>
+        </button>
+        <button 
           onClick={() => setActiveTab('settings')}
           className={`w-full flex items-center space-x-3 px-4 py-3 rounded-xl font-bold transition-all ${
             activeTab === 'settings' ? 'bg-orange-600 text-white shadow-lg shadow-orange-600/20' : 'text-slate-600 hover:bg-slate-100'
@@ -614,6 +632,15 @@ export const AdminDashboard: React.FC = () => {
             >
               <DollarSign className="h-4 w-4" />
               <span>Payouts</span>
+            </button>
+            <button 
+              onClick={() => setActiveTab('shipping')}
+              className={`flex items-center space-x-2 px-4 py-2 rounded-full font-bold text-sm transition-all ${
+                activeTab === 'shipping' ? 'bg-orange-600 text-white shadow-md shadow-orange-600/20' : 'bg-white text-slate-600 border border-slate-100'
+              }`}
+            >
+              <Truck className="h-4 w-4" />
+              <span>Shipping</span>
             </button>
             <button 
               onClick={() => setActiveTab('settings')}
@@ -1488,6 +1515,126 @@ export const AdminDashboard: React.FC = () => {
                   ))}
                 </tbody>
               </table>
+            </div>
+          </div>
+        )}
+
+        {activeTab === 'shipping' && (
+          <div className="space-y-8">
+            <div className="flex items-center justify-between">
+              <h2 className="text-2xl font-extrabold text-slate-900">Shipping Management</h2>
+              <div className="flex space-x-3">
+                <button 
+                  onClick={() => fetchData()}
+                  className="p-2 bg-white border border-slate-100 rounded-xl text-slate-600 hover:bg-slate-50 transition shadow-sm"
+                  title="Refresh Data"
+                >
+                  <Clock className="h-5 w-5" />
+                </button>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+              {/* Zones & Rates */}
+              <div className="space-y-6">
+                <div className="bg-white rounded-3xl border border-slate-100 shadow-sm overflow-hidden">
+                  <div className="px-6 py-4 border-b border-slate-100 bg-slate-50 flex justify-between items-center">
+                    <h3 className="font-bold text-slate-900 flex items-center">
+                      <Truck className="h-4 w-4 mr-2 text-orange-600" />
+                      Shipping Zones & Delivery Times
+                    </h3>
+                  </div>
+                  <div className="divide-y divide-slate-100">
+                    {shippingZones.map((zone) => (
+                      <div key={zone.id} className="px-6 py-4 hover:bg-slate-50 transition-colors">
+                        <div className="flex justify-between items-start mb-2">
+                          <div>
+                            <div className="font-bold text-slate-900">{zone.name}</div>
+                            <div className="text-xs text-slate-500">
+                              Est. Delivery: {zone.estimated_days_min}-{zone.estimated_days_max} days
+                            </div>
+                          </div>
+                        </div>
+                        <div className="mt-4 space-y-2">
+                          <div className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Weight Rates</div>
+                          <div className="grid grid-cols-1 gap-2">
+                            {shippingRates.filter(r => r.zone_id === zone.id).map(rate => (
+                              <div key={rate.id} className="flex items-center justify-between bg-slate-50 px-3 py-2 rounded-lg border border-slate-100">
+                                <span className="text-xs text-slate-600">
+                                  {rate.min_weight_kg}-{rate.max_weight_kg}kg
+                                </span>
+                                <div className="flex items-center space-x-3">
+                                  <span className="font-bold text-slate-900 text-xs">₦{rate.base_fee.toLocaleString()}</span>
+                                  <button 
+                                    onClick={async () => {
+                                      const newFee = prompt(`Enter new fee for ${zone.name} (${rate.min_weight_kg}-${rate.max_weight_kg}kg):`, rate.base_fee.toString());
+                                      if (newFee && !isNaN(Number(newFee))) {
+                                        const { error } = await supabase.from('shipping_rates').update({ base_fee: Number(newFee) }).eq('id', rate.id);
+                                        if (error) toast.error(error.message);
+                                        else {
+                                          toast.success('Rate updated!');
+                                          fetchData();
+                                        }
+                                      }
+                                    }}
+                                    className="p-1 text-slate-400 hover:text-orange-600 transition"
+                                  >
+                                    <Edit className="h-3 w-3" />
+                                  </button>
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </div>
+
+              {/* States Mapping */}
+              <div className="space-y-6">
+                <div className="bg-white rounded-3xl border border-slate-100 shadow-sm overflow-hidden">
+                  <div className="px-6 py-4 border-b border-slate-100 bg-slate-50">
+                    <h3 className="font-bold text-slate-900 flex items-center">
+                      <MapPin className="h-4 w-4 mr-2 text-orange-600" />
+                      State to Zone Mapping
+                    </h3>
+                  </div>
+                  <div className="max-h-[600px] overflow-y-auto divide-y divide-slate-100">
+                    {shippingStates.map((state) => (
+                      <div key={state.id} className="px-6 py-3 flex items-center justify-between hover:bg-slate-50 transition-colors">
+                        <span className="font-medium text-slate-700">{state.state_name}</span>
+                        <div className="flex items-center space-x-3">
+                          <span className="text-xs font-bold text-orange-600 bg-orange-50 px-2 py-1 rounded-md">
+                            {state.shipping_zones?.name}
+                          </span>
+                          <button 
+                            onClick={async () => {
+                              const zoneNames = shippingZones.map(z => z.name).join(', ');
+                              const newZoneName = prompt(`Enter new zone for ${state.state_name} (${zoneNames}):`, state.shipping_zones?.name);
+                              const newZone = shippingZones.find(z => z.name === newZoneName);
+                              if (newZone) {
+                                const { error } = await supabase.from('shipping_states').update({ zone_id: newZone.id }).eq('id', state.id);
+                                if (error) toast.error(error.message);
+                                else {
+                                  toast.success('State zone updated!');
+                                  fetchData();
+                                }
+                              } else if (newZoneName) {
+                                toast.error('Invalid zone name');
+                              }
+                            }}
+                            className="p-1 text-slate-400 hover:text-orange-600 transition"
+                          >
+                            <Edit className="h-3 w-3" />
+                          </button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </div>
             </div>
           </div>
         )}
