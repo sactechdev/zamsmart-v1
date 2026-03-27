@@ -55,7 +55,7 @@ export const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) =>
       
       {/* Top Bar */}
       <div className="bg-orange-600 text-white py-2 px-4 text-center text-xs font-medium tracking-wide uppercase">
-        Free Delivery on orders over ₦50,000 in Lagos!
+        Free Delivery on orders over ₦50,000 in Kano!
       </div>
 
       {/* Header */}

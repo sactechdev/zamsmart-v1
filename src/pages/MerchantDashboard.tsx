@@ -11,12 +11,15 @@ import {
   Clock,
   DollarSign,
   TrendingUp,
-  AlertCircle
+  AlertCircle,
+  Sparkles,
+  Loader2
 } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import { Product, Category, Profile, OrderItem, Payout } from '../types';
 import toast from 'react-hot-toast';
 import { format } from 'date-fns';
+import { removeBackground } from '../lib/gemini';
 
 export default function MerchantDashboard() {
   const [user, setUser] = useState<any>(null);
@@ -56,6 +59,25 @@ export default function MerchantDashboard() {
     category_id: '',
     image_url: ''
   });
+  const [removingBackground, setRemovingBackground] = useState(false);
+
+  const handleRemoveBackground = async () => {
+    if (!newProduct.image_url) {
+      toast.error('Please provide an image URL first');
+      return;
+    }
+
+    setRemovingBackground(true);
+    try {
+      const processedImageUrl = await removeBackground(newProduct.image_url);
+      setNewProduct({ ...newProduct, image_url: processedImageUrl });
+      toast.success('Background removed successfully!');
+    } catch (error: any) {
+      toast.error('Failed to remove background: ' + error.message);
+    } finally {
+      setRemovingBackground(false);
+    }
+  };
 
   useEffect(() => {
     if (user) {
@@ -734,8 +756,25 @@ export default function MerchantDashboard() {
                   </select>
                 </div>
 
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Image URL</label>
+                <div className="md:col-span-2">
+                  <div className="flex justify-between items-center mb-1">
+                    <label className="block text-sm font-medium text-gray-700">Image URL</label>
+                    {newProduct.image_url && (
+                      <button 
+                        type="button"
+                        onClick={handleRemoveBackground}
+                        disabled={removingBackground}
+                        className="text-emerald-600 text-xs font-bold hover:underline flex items-center disabled:opacity-50"
+                      >
+                        {removingBackground ? (
+                          <Loader2 className="h-3 w-3 mr-1 animate-spin" />
+                        ) : (
+                          <Sparkles className="h-3 w-3 mr-1" />
+                        )}
+                        Remove Background
+                      </button>
+                    )}
+                  </div>
                   <input
                     required
                     type="url"

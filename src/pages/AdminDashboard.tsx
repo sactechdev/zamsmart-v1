@@ -6,11 +6,13 @@ import {
   TrendingUp, Clock, CheckCircle, XCircle, Eye, 
   Plus, Edit, Trash2, Search, Filter, ChevronRight,
   DollarSign, PackageCheck, AlertCircle, Settings,
-  CreditCard, MapPin, Truck, FileText, ShieldCheck
+  CreditCard, MapPin, Truck, FileText, ShieldCheck,
+  Sparkles, Loader2
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import toast from 'react-hot-toast';
 import { format } from 'date-fns';
+import { removeBackground } from '../lib/gemini';
 
 export const AdminDashboard: React.FC = () => {
   const [activeTab, setActiveTab] = useState<'overview' | 'orders' | 'products' | 'merchants' | 'categories' | 'settings' | 'payouts' | 'users'>('overview');
@@ -55,11 +57,37 @@ export const AdminDashboard: React.FC = () => {
     totalProducts: 0
   });
   const [dbStatus, setDbStatus] = useState<{ connected: boolean; error?: string }>({ connected: false });
+  const [removingBackground, setRemovingBackground] = useState<string | null>(null);
 
   useEffect(() => {
     fetchData();
     checkConnection();
   }, [activeTab]);
+
+  const handleRemoveBackground = async (field: 'main' | number) => {
+    const imageUrl = field === 'main' ? productForm.image_url : productForm.additional_images[field];
+    if (!imageUrl) {
+      toast.error('Please provide an image URL first');
+      return;
+    }
+
+    setRemovingBackground(field === 'main' ? 'main' : `additional-${field}`);
+    try {
+      const processedImageUrl = await removeBackground(imageUrl);
+      if (field === 'main') {
+        setProductForm({ ...productForm, image_url: processedImageUrl });
+      } else {
+        const newImages = [...productForm.additional_images];
+        newImages[field] = processedImageUrl;
+        setProductForm({ ...productForm, additional_images: newImages });
+      }
+      toast.success('Background removed successfully!');
+    } catch (error: any) {
+      toast.error('Failed to remove background: ' + error.message);
+    } finally {
+      setRemovingBackground(null);
+    }
+  };
 
   const checkConnection = async () => {
     try {
@@ -949,7 +977,24 @@ export const AdminDashboard: React.FC = () => {
                         </select>
                       </div>
                       <div className="space-y-1">
-                        <label className="text-xs font-bold text-slate-700 uppercase">Main Image URL</label>
+                        <div className="flex justify-between items-center">
+                          <label className="text-xs font-bold text-slate-700 uppercase">Main Image URL</label>
+                          {productForm.image_url && (
+                            <button 
+                              type="button"
+                              onClick={() => handleRemoveBackground('main')}
+                              disabled={removingBackground === 'main'}
+                              className="text-emerald-600 text-xs font-bold hover:underline flex items-center disabled:opacity-50"
+                            >
+                              {removingBackground === 'main' ? (
+                                <Loader2 className="h-3 w-3 mr-1 animate-spin" />
+                              ) : (
+                                <Sparkles className="h-3 w-3 mr-1" />
+                              )}
+                              Remove Background
+                            </button>
+                          )}
+                        </div>
                         <input 
                           className="w-full px-4 py-3 rounded-xl border border-slate-200 outline-none focus:ring-2 focus:ring-orange-500"
                           value={productForm.image_url}
@@ -973,27 +1018,44 @@ export const AdminDashboard: React.FC = () => {
                         </div>
                         <div className="space-y-2">
                           {productForm.additional_images.map((url, index) => (
-                            <div key={index} className="flex space-x-2">
-                              <input 
-                                className="flex-1 px-4 py-2 rounded-xl border border-slate-200 outline-none focus:ring-2 focus:ring-orange-500 text-sm"
-                                placeholder="https://example.com/image.jpg"
-                                value={url}
-                                onChange={(e) => {
-                                  const newImages = [...productForm.additional_images];
-                                  newImages[index] = e.target.value;
-                                  setProductForm({...productForm, additional_images: newImages});
-                                }}
-                              />
-                              <button 
-                                type="button"
-                                onClick={() => {
-                                  const newImages = productForm.additional_images.filter((_, i) => i !== index);
-                                  setProductForm({...productForm, additional_images: newImages.length ? newImages : ['']});
-                                }}
-                                className="p-2 text-slate-400 hover:text-red-600 transition-colors"
-                              >
-                                <Trash2 className="h-4 w-4" />
-                              </button>
+                            <div key={index} className="flex flex-col space-y-2">
+                              <div className="flex space-x-2">
+                                <input 
+                                  className="flex-1 px-4 py-2 rounded-xl border border-slate-200 outline-none focus:ring-2 focus:ring-orange-500 text-sm"
+                                  placeholder="https://example.com/image.jpg"
+                                  value={url}
+                                  onChange={(e) => {
+                                    const newImages = [...productForm.additional_images];
+                                    newImages[index] = e.target.value;
+                                    setProductForm({...productForm, additional_images: newImages});
+                                  }}
+                                />
+                                {url && (
+                                  <button 
+                                    type="button"
+                                    onClick={() => handleRemoveBackground(index)}
+                                    disabled={removingBackground === `additional-${index}`}
+                                    className="p-2 text-emerald-600 hover:bg-emerald-50 rounded-xl transition-colors disabled:opacity-50"
+                                    title="Remove Background"
+                                  >
+                                    {removingBackground === `additional-${index}` ? (
+                                      <Loader2 className="h-4 w-4 animate-spin" />
+                                    ) : (
+                                      <Sparkles className="h-4 w-4" />
+                                    )}
+                                  </button>
+                                )}
+                                <button 
+                                  type="button"
+                                  onClick={() => {
+                                    const newImages = productForm.additional_images.filter((_, i) => i !== index);
+                                    setProductForm({...productForm, additional_images: newImages.length ? newImages : ['']});
+                                  }}
+                                  className="p-2 text-slate-400 hover:text-red-600 transition-colors"
+                                >
+                                  <Trash2 className="h-4 w-4" />
+                                </button>
+                              </div>
                             </div>
                           ))}
                         </div>
