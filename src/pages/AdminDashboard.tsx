@@ -32,6 +32,11 @@ export const AdminDashboard: React.FC = () => {
     stock: 0,
     category_id: '',
     image_url: '',
+    video_url: '',
+    weight_kg: 0.5,
+    length_cm: 0,
+    width_cm: 0,
+    height_cm: 0,
     is_featured: false,
     additional_images: ['']
   });
@@ -361,6 +366,11 @@ export const AdminDashboard: React.FC = () => {
         stock: product.stock,
         category_id: product.category_id,
         image_url: product.image_url,
+        video_url: product.video_url || '',
+        weight_kg: product.weight_kg || 0.5,
+        length_cm: product.length_cm || 0,
+        width_cm: product.width_cm || 0,
+        height_cm: product.height_cm || 0,
         is_featured: product.is_featured,
         additional_images: product.product_images?.map(img => img.image_url) || ['']
       });
@@ -373,6 +383,11 @@ export const AdminDashboard: React.FC = () => {
         stock: 0,
         category_id: categories[0]?.id || '',
         image_url: '',
+        video_url: '',
+        weight_kg: 0.5,
+        length_cm: 0,
+        width_cm: 0,
+        height_cm: 0,
         is_featured: false,
         additional_images: ['']
       });
@@ -978,6 +993,56 @@ export const AdminDashboard: React.FC = () => {
                             <option key={cat.id} value={cat.id}>{cat.name}</option>
                           ))}
                         </select>
+                      </div>
+
+                      <div className="space-y-1 md:col-span-2">
+                        <label className="text-xs font-bold text-slate-700 uppercase">Video URL (Optional)</label>
+                        <input 
+                          className="w-full px-4 py-3 rounded-xl border border-slate-200 outline-none focus:ring-2 focus:ring-orange-500"
+                          placeholder="YouTube or MP4 URL"
+                          value={productForm.video_url}
+                          onChange={(e) => setProductForm({...productForm, video_url: e.target.value})}
+                        />
+                      </div>
+
+                      <div className="grid grid-cols-2 md:grid-cols-4 gap-4 md:col-span-2">
+                        <div className="space-y-1">
+                          <label className="text-xs font-bold text-slate-700 uppercase">Weight (kg)</label>
+                          <input 
+                            type="number"
+                            step="0.01"
+                            className="w-full px-4 py-3 rounded-xl border border-slate-200 outline-none focus:ring-2 focus:ring-orange-500"
+                            value={productForm.weight_kg}
+                            onChange={(e) => setProductForm({...productForm, weight_kg: Number(e.target.value)})}
+                          />
+                        </div>
+                        <div className="space-y-1">
+                          <label className="text-xs font-bold text-slate-700 uppercase">Length (cm)</label>
+                          <input 
+                            type="number"
+                            className="w-full px-4 py-3 rounded-xl border border-slate-200 outline-none focus:ring-2 focus:ring-orange-500"
+                            value={productForm.length_cm}
+                            onChange={(e) => setProductForm({...productForm, length_cm: Number(e.target.value)})}
+                          />
+                        </div>
+                        <div className="space-y-1">
+                          <label className="text-xs font-bold text-slate-700 uppercase">Width (cm)</label>
+                          <input 
+                            type="number"
+                            className="w-full px-4 py-3 rounded-xl border border-slate-200 outline-none focus:ring-2 focus:ring-orange-500"
+                            value={productForm.width_cm}
+                            onChange={(e) => setProductForm({...productForm, width_cm: Number(e.target.value)})}
+                          />
+                        </div>
+                        <div className="space-y-1">
+                          <label className="text-xs font-bold text-slate-700 uppercase">Height (cm)</label>
+                          <input 
+                            type="number"
+                            className="w-full px-4 py-3 rounded-xl border border-slate-200 outline-none focus:ring-2 focus:ring-orange-500"
+                            value={productForm.height_cm}
+                            onChange={(e) => setProductForm({...productForm, height_cm: Number(e.target.value)})}
+                          />
+                        </div>
                       </div>
                       <div className="space-y-1">
                         <div className="flex justify-between items-center">

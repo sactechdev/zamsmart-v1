@@ -5,12 +5,15 @@ import { useNavigate } from 'react-router-dom';
 import { CheckCircle2, Upload, CreditCard, Truck, MapPin, ArrowRight, Loader2 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import toast from 'react-hot-toast';
+import { calculateShipping, ShippingCalculationResult } from '../services/shippingService';
 
 export const Checkout: React.FC = () => {
   const { cart, subtotal, clearCart } = useCart();
   const [step, setStep] = useState(1);
   const [loading, setLoading] = useState(false);
   const [user, setUser] = useState<any>(null);
+  const [shippingResult, setShippingResult] = useState<ShippingCalculationResult | null>(null);
+  const [calculatingShipping, setCalculatingShipping] = useState(false);
   const [settings, setSettings] = useState<{
     bank_details: any;
     shipping_config: any;
@@ -56,6 +59,27 @@ export const Checkout: React.FC = () => {
     });
   }, []);
 
+  // Recalculate shipping when state changes
+  useEffect(() => {
+    if (formData.state && cart.length > 0) {
+      const updateShipping = async () => {
+        setCalculatingShipping(true);
+        try {
+          const result = await calculateShipping({
+            state: formData.state,
+            items: cart.map(item => ({ product_id: item.id, quantity: item.quantity }))
+          });
+          setShippingResult(result);
+        } catch (error) {
+          console.error('Failed to calculate shipping:', error);
+        } finally {
+          setCalculatingShipping(false);
+        }
+      };
+      updateShipping();
+    }
+  }, [formData.state, cart]);
+
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
   };
@@ -75,12 +99,17 @@ export const Checkout: React.FC = () => {
     setLoading(true);
     try {
       // 1. Create Order
-      const shippingFee = subtotal > settings.shipping_config.free_shipping_threshold ? 0 : settings.shipping_config.shipping_fee;
+      const baseShippingFee = shippingResult?.shipping_fee ?? settings.shipping_config.shipping_fee;
+      const shippingFee = subtotal > settings.shipping_config.free_shipping_threshold ? 0 : baseShippingFee;
+      
       const { data: order, error: orderError } = await supabase
         .from('orders')
         .insert({
           user_id: user?.id,
           total_amount: subtotal + shippingFee,
+          shipping_fee: shippingFee,
+          shipping_zone: shippingResult?.zone,
+          estimated_delivery_days: shippingResult ? `${shippingResult.estimated_days_min}-${shippingResult.estimated_days_max}` : null,
           status: 'Pending Payment Review',
           ...formData
         })
@@ -308,13 +337,27 @@ export const Checkout: React.FC = () => {
                     <span className="text-slate-500">Subtotal</span>
                     <span className="font-bold">₦{subtotal.toLocaleString()}</span>
                   </div>
-                  <div className="flex justify-between">
-                    <span className="text-slate-500">Shipping</span>
-                    <span className="font-bold">₦{(subtotal > settings.shipping_config.free_shipping_threshold ? 0 : settings.shipping_config.shipping_fee).toLocaleString()}</span>
+                  <div className="flex justify-between items-center">
+                    <span className="text-slate-500 flex items-center">
+                      Shipping
+                      {calculatingShipping && <Loader2 className="ml-2 h-3 w-3 animate-spin" />}
+                    </span>
+                    <div className="text-right">
+                      <span className="font-bold block">
+                        {subtotal > settings.shipping_config.free_shipping_threshold ? '₦0' : `₦${(shippingResult?.shipping_fee ?? settings.shipping_config.shipping_fee).toLocaleString()}`}
+                      </span>
+                      {shippingResult && subtotal <= settings.shipping_config.free_shipping_threshold && (
+                        <span className="text-[10px] text-slate-400 block">
+                          {shippingResult.zone} • {shippingResult.estimated_days_min}-{shippingResult.estimated_days_max} days
+                        </span>
+                      )}
+                    </div>
                   </div>
                   <div className="flex justify-between text-lg pt-2 border-t border-slate-200">
                     <span className="font-bold">Total to Pay</span>
-                    <span className="font-black text-orange-600">₦{(subtotal + (subtotal > settings.shipping_config.free_shipping_threshold ? 0 : settings.shipping_config.shipping_fee)).toLocaleString()}</span>
+                    <span className="font-black text-orange-600">
+                      ₦{(subtotal + (subtotal > settings.shipping_config.free_shipping_threshold ? 0 : (shippingResult?.shipping_fee ?? settings.shipping_config.shipping_fee))).toLocaleString()}
+                    </span>
                   </div>
                 </div>
               </div>

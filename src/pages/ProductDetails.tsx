@@ -16,6 +16,7 @@ export const ProductDetails: React.FC = () => {
   const navigate = useNavigate();
 
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
+  const [showVideo, setShowVideo] = useState(false);
 
   useEffect(() => {
     const fetchProduct = async () => {
@@ -85,6 +86,42 @@ export const ProductDetails: React.FC = () => {
     toast.success(`${quantity} ${product.name} added to cart!`);
   };
 
+  const renderMedia = () => {
+    if (showVideo && product.video_url) {
+      const isYoutube = product.video_url.includes('youtube.com') || product.video_url.includes('youtu.be');
+      if (isYoutube) {
+        const videoId = product.video_url.includes('v=') 
+          ? product.video_url.split('v=')[1].split('&')[0]
+          : product.video_url.split('/').pop();
+        return (
+          <iframe
+            className="w-full h-full aspect-square"
+            src={`https://www.youtube.com/embed/${videoId}`}
+            title="Product Video"
+            frameBorder="0"
+            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+            allowFullScreen
+          ></iframe>
+        );
+      }
+      return (
+        <video 
+          src={product.video_url} 
+          controls 
+          className="w-full h-full aspect-square object-contain bg-black"
+        />
+      );
+    }
+    return (
+      <img 
+        src={selectedImage || 'https://picsum.photos/seed/product/800/800'} 
+        alt={product.name}
+        className="w-full h-full object-cover"
+        referrerPolicy="no-referrer"
+      />
+    );
+  };
+
   return (
     <div className="space-y-8">
       <button 
@@ -100,28 +137,35 @@ export const ProductDetails: React.FC = () => {
           <motion.div 
             initial={{ opacity: 0, scale: 0.95 }}
             animate={{ opacity: 1, scale: 1 }}
-            className="aspect-square rounded-3xl overflow-hidden bg-white border border-slate-100 shadow-sm"
+            className="aspect-square rounded-3xl overflow-hidden bg-white border border-slate-100 shadow-sm relative"
           >
-            <img 
-              src={selectedImage || 'https://picsum.photos/seed/product/800/800'} 
-              alt={product.name}
-              className="w-full h-full object-cover"
-              referrerPolicy="no-referrer"
-            />
+            {renderMedia()}
           </motion.div>
-          {allImages.length > 1 && (
-            <div className="grid grid-cols-4 gap-4">
-              {allImages.map((img, i) => (
-                <div 
-                  key={i} 
-                  onClick={() => setSelectedImage(img)}
-                  className={`aspect-square rounded-xl overflow-hidden bg-white border cursor-pointer transition-all ${selectedImage === img ? 'border-orange-500 ring-2 ring-orange-500/20' : 'border-slate-100 hover:border-orange-300'}`}
-                >
-                  <img src={img} alt={`thumb-${i}`} className="w-full h-full object-cover" referrerPolicy="no-referrer" />
+          <div className="grid grid-cols-4 gap-4">
+            {allImages.map((img, i) => (
+              <div 
+                key={i} 
+                onClick={() => {
+                  setSelectedImage(img);
+                  setShowVideo(false);
+                }}
+                className={`aspect-square rounded-xl overflow-hidden bg-white border cursor-pointer transition-all ${!showVideo && selectedImage === img ? 'border-orange-500 ring-2 ring-orange-500/20' : 'border-slate-100 hover:border-orange-300'}`}
+              >
+                <img src={img} alt={`thumb-${i}`} className="w-full h-full object-cover" referrerPolicy="no-referrer" />
+              </div>
+            ))}
+            {product.video_url && (
+              <div 
+                onClick={() => setShowVideo(true)}
+                className={`aspect-square rounded-xl overflow-hidden bg-slate-900 border cursor-pointer transition-all flex items-center justify-center ${showVideo ? 'border-orange-500 ring-2 ring-orange-500/20' : 'border-slate-100 hover:border-orange-300'}`}
+              >
+                <div className="text-white text-center">
+                  <Plus className="h-6 w-6 mx-auto mb-1 rotate-45" />
+                  <span className="text-[10px] font-bold uppercase tracking-tighter">Video</span>
                 </div>
-              ))}
-            </div>
-          )}
+              </div>
+            )}
+          </div>
         </div>
 
         {/* Info */}

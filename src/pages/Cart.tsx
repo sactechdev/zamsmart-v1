@@ -93,14 +93,17 @@ export const Cart: React.FC = () => {
               </div>
               <div className="flex justify-between">
                 <span className="text-slate-500">Shipping</span>
-                <span className="text-green-600 font-bold">{subtotal > 50000 ? 'FREE' : '₦2,500'}</span>
+                <span className="text-slate-400 text-xs italic">Calculated at checkout</span>
               </div>
               <div className="border-t border-slate-100 pt-2 flex justify-between text-lg">
                 <span className="font-bold text-slate-900">Total</span>
                 <span className="font-black text-orange-600">
-                  ₦{(subtotal + (subtotal > 50000 ? 0 : 2500)).toLocaleString()}
+                  ₦{subtotal.toLocaleString()}
                 </span>
               </div>
+              <p className="text-[10px] text-slate-400 text-center">
+                * Final total including shipping will be shown on the next page
+              </p>
             </div>
 
             <button 

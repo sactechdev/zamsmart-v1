@@ -57,7 +57,12 @@ export default function MerchantDashboard() {
     price: '',
     stock: '',
     category_id: '',
-    image_url: ''
+    image_url: '',
+    video_url: '',
+    weight_kg: '0.5',
+    length_cm: '0',
+    width_cm: '0',
+    height_cm: '0'
   });
   const [removingBackground, setRemovingBackground] = useState(false);
 
@@ -155,6 +160,10 @@ export default function MerchantDashboard() {
           ...newProduct,
           price: parseFloat(newProduct.price),
           stock: parseInt(newProduct.stock),
+          weight_kg: parseFloat(newProduct.weight_kg),
+          length_cm: parseFloat(newProduct.length_cm),
+          width_cm: parseFloat(newProduct.width_cm),
+          height_cm: parseFloat(newProduct.height_cm),
           merchant_id: user?.id,
           approval_status: 'pending'
         }]);
@@ -169,7 +178,12 @@ export default function MerchantDashboard() {
         price: '',
         stock: '',
         category_id: '',
-        image_url: ''
+        image_url: '',
+        video_url: '',
+        weight_kg: '0.5',
+        length_cm: '0',
+        width_cm: '0',
+        height_cm: '0'
       });
       fetchMerchantData();
     } catch (error: any) {
@@ -754,6 +768,57 @@ export default function MerchantDashboard() {
                       <option key={cat.id} value={cat.id}>{cat.name}</option>
                     ))}
                   </select>
+                </div>
+
+                <div className="md:col-span-2">
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Video URL (Optional)</label>
+                  <input
+                    type="text"
+                    value={newProduct.video_url}
+                    onChange={(e) => setNewProduct({...newProduct, video_url: e.target.value})}
+                    placeholder="YouTube or MP4 URL"
+                    className="w-full px-4 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-emerald-500 outline-none"
+                  />
+                </div>
+
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-4 md:col-span-2">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Weight (kg)</label>
+                    <input
+                      type="number"
+                      step="0.01"
+                      value={newProduct.weight_kg}
+                      onChange={(e) => setNewProduct({...newProduct, weight_kg: e.target.value})}
+                      className="w-full px-4 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-emerald-500 outline-none"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Length (cm)</label>
+                    <input
+                      type="number"
+                      value={newProduct.length_cm}
+                      onChange={(e) => setNewProduct({...newProduct, length_cm: e.target.value})}
+                      className="w-full px-4 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-emerald-500 outline-none"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Width (cm)</label>
+                    <input
+                      type="number"
+                      value={newProduct.width_cm}
+                      onChange={(e) => setNewProduct({...newProduct, width_cm: e.target.value})}
+                      className="w-full px-4 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-emerald-500 outline-none"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Height (cm)</label>
+                    <input
+                      type="number"
+                      value={newProduct.height_cm}
+                      onChange={(e) => setNewProduct({...newProduct, height_cm: e.target.value})}
+                      className="w-full px-4 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-emerald-500 outline-none"
+                    />
+                  </div>
                 </div>
 
                 <div className="md:col-span-2">

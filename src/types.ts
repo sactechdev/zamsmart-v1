@@ -33,6 +33,11 @@ export interface Product {
   merchant_id?: string;
   approval_status?: ApprovalStatus;
   image_url: string;
+  video_url?: string;
+  weight_kg?: number;
+  length_cm?: number;
+  width_cm?: number;
+  height_cm?: number;
   is_featured: boolean;
   created_at: string;
   categories?: Category;
