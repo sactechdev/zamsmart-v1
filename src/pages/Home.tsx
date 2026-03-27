@@ -4,7 +4,7 @@ import { Product, Category } from '../types';
 import { ProductCard } from '../components/ProductCard';
 import { ChevronRight, ArrowRight, Zap, ShieldCheck, Truck, Star } from 'lucide-react';
 import { Link } from 'react-router-dom';
-import { motion } from 'motion/react';
+import { motion } from 'framer-motion';
 
 export const Home: React.FC = () => {
   const [featuredProducts, setFeaturedProducts] = useState<Product[]>([]);

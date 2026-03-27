@@ -2,7 +2,7 @@ import React from 'react';
 import { useCart } from '../context/CartContext';
 import { Link, useNavigate } from 'react-router-dom';
 import { Trash2, Minus, Plus, ShoppingBag, ArrowRight } from 'lucide-react';
-import { motion, AnimatePresence } from 'motion/react';
+import { motion, AnimatePresence } from 'framer-motion';
 
 export const Cart: React.FC = () => {
   const { cart, removeFromCart, updateQuantity, subtotal } = useCart();

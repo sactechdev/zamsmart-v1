@@ -9,7 +9,7 @@ import {
   CreditCard, MapPin, Truck, FileText, ShieldCheck,
   Sparkles, Loader2
 } from 'lucide-react';
-import { motion, AnimatePresence } from 'motion/react';
+import { motion, AnimatePresence } from 'framer-motion';
 import toast from 'react-hot-toast';
 import { format } from 'date-fns';
 import { removeBackground } from '../lib/gemini';

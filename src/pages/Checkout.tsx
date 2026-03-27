@@ -3,7 +3,7 @@ import { useCart } from '../context/CartContext';
 import { supabase } from '../lib/supabase';
 import { useNavigate } from 'react-router-dom';
 import { CheckCircle2, Upload, CreditCard, Truck, MapPin, ArrowRight, Loader2 } from 'lucide-react';
-import { motion, AnimatePresence } from 'motion/react';
+import { motion, AnimatePresence } from 'framer-motion';
 import toast from 'react-hot-toast';
 
 export const Checkout: React.FC = () => {

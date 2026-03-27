@@ -4,7 +4,7 @@ import { supabase } from '../lib/supabase';
 import { Product } from '../types';
 import { useCart } from '../context/CartContext';
 import { ShoppingCart, ArrowLeft, Star, ShieldCheck, Truck, RefreshCw, Minus, Plus } from 'lucide-react';
-import { motion } from 'motion/react';
+import { motion } from 'framer-motion';
 import toast from 'react-hot-toast';
 
 export const ProductDetails: React.FC = () => {

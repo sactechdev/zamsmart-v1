@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { supabase } from '../lib/supabase';
-import { motion } from 'motion/react';
+import { motion } from 'framer-motion';
 import { FileText, Loader2 } from 'lucide-react';
 
 export const TermsOfService: React.FC = () => {

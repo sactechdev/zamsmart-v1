@@ -1,8 +1,20 @@
 import { GoogleGenAI } from "@google/genai";
 
-const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY || "" });
+const getAI = () => {
+  const apiKey = process.env.GEMINI_API_KEY || "";
+  if (!apiKey) {
+    console.warn("GEMINI_API_KEY is missing. Background removal will not work.");
+    return null;
+  }
+  return new GoogleGenAI({ apiKey });
+};
 
 export async function removeBackground(imageUrl: string): Promise<string> {
+  const ai = getAI();
+  if (!ai) {
+    throw new Error("Gemini API key is not configured. Please add it to your environment variables.");
+  }
+
   try {
     // Fetch the image
     const response = await fetch(imageUrl);
