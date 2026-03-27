@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { supabase } from '../lib/supabase';
+import { supabase, uploadImage } from '../lib/supabase';
 import { Order, Product, Category, PaymentProof, Profile, Payout } from '../types';
 import { 
   LayoutDashboard, ShoppingBag, Package, List, Users, 
@@ -384,7 +384,8 @@ export const AdminDashboard: React.FC = () => {
   const [editingCategory, setEditingCategory] = useState<Category | null>(null);
   const [categoryForm, setCategoryForm] = useState({
     name: '',
-    slug: ''
+    slug: '',
+    image_url: ''
   });
 
   const handleSaveCategory = async (e: React.FormEvent) => {
@@ -422,13 +423,15 @@ export const AdminDashboard: React.FC = () => {
       setEditingCategory(category);
       setCategoryForm({
         name: category.name,
-        slug: category.slug
+        slug: category.slug,
+        image_url: category.image_url || ''
       });
     } else {
       setEditingCategory(null);
       setCategoryForm({
         name: '',
-        slug: ''
+        slug: '',
+        image_url: ''
       });
     }
     setShowCategoryModal(true);
@@ -978,7 +981,7 @@ export const AdminDashboard: React.FC = () => {
                       </div>
                       <div className="space-y-1">
                         <div className="flex justify-between items-center">
-                          <label className="text-xs font-bold text-slate-700 uppercase">Main Image URL</label>
+                          <label className="text-xs font-bold text-slate-700 uppercase">Main Image</label>
                           {productForm.image_url && (
                             <button 
                               type="button"
@@ -995,11 +998,36 @@ export const AdminDashboard: React.FC = () => {
                             </button>
                           )}
                         </div>
-                        <input 
-                          className="w-full px-4 py-3 rounded-xl border border-slate-200 outline-none focus:ring-2 focus:ring-orange-500"
-                          value={productForm.image_url}
-                          onChange={(e) => setProductForm({...productForm, image_url: e.target.value})}
-                        />
+                        <div className="flex gap-2">
+                          <input 
+                            className="flex-1 px-4 py-3 rounded-xl border border-slate-200 outline-none focus:ring-2 focus:ring-orange-500"
+                            placeholder="Image URL"
+                            value={productForm.image_url}
+                            onChange={(e) => setProductForm({...productForm, image_url: e.target.value})}
+                          />
+                          <label className="cursor-pointer bg-slate-100 hover:bg-slate-200 px-4 py-3 rounded-xl border border-slate-200 flex items-center justify-center transition-colors">
+                            <Plus className="h-5 w-5 text-slate-600" />
+                            <input 
+                              type="file" 
+                              className="hidden" 
+                              accept="image/*"
+                              onChange={async (e) => {
+                                const file = e.target.files?.[0];
+                                if (file) {
+                                  const loadingToast = toast.loading('Uploading image...');
+                                  try {
+                                    const url = await uploadImage(file);
+                                    setProductForm({...productForm, image_url: url});
+                                    toast.success('Image uploaded successfully', { id: loadingToast });
+                                  } catch (err) {
+                                    console.error(err);
+                                    toast.error('Failed to upload image', { id: loadingToast });
+                                  }
+                                }
+                              }}
+                            />
+                          </label>
+                        </div>
                       </div>
 
                       <div className="space-y-3 md:col-span-2">
@@ -1022,7 +1050,7 @@ export const AdminDashboard: React.FC = () => {
                               <div className="flex space-x-2">
                                 <input 
                                   className="flex-1 px-4 py-2 rounded-xl border border-slate-200 outline-none focus:ring-2 focus:ring-orange-500 text-sm"
-                                  placeholder="https://example.com/image.jpg"
+                                  placeholder="Image URL"
                                   value={url}
                                   onChange={(e) => {
                                     const newImages = [...productForm.additional_images];
@@ -1030,6 +1058,30 @@ export const AdminDashboard: React.FC = () => {
                                     setProductForm({...productForm, additional_images: newImages});
                                   }}
                                 />
+                                <label className="cursor-pointer bg-slate-100 hover:bg-slate-200 px-3 py-2 rounded-xl border border-slate-200 flex items-center justify-center transition-colors">
+                                  <Plus className="h-4 w-4 text-slate-600" />
+                                  <input 
+                                    type="file" 
+                                    className="hidden" 
+                                    accept="image/*"
+                                    onChange={async (e) => {
+                                      const file = e.target.files?.[0];
+                                      if (file) {
+                                        const loadingToast = toast.loading('Uploading image...');
+                                        try {
+                                          const uploadedUrl = await uploadImage(file);
+                                          const newImages = [...productForm.additional_images];
+                                          newImages[index] = uploadedUrl;
+                                          setProductForm({...productForm, additional_images: newImages});
+                                          toast.success('Image uploaded successfully', { id: loadingToast });
+                                        } catch (err) {
+                                          console.error(err);
+                                          toast.error('Failed to upload image', { id: loadingToast });
+                                        }
+                                      }
+                                    }}
+                                  />
+                                </label>
                                 {url && (
                                   <button 
                                     type="button"
@@ -1161,6 +1213,40 @@ export const AdminDashboard: React.FC = () => {
                           value={categoryForm.slug}
                           readOnly
                         />
+                      </div>
+
+                      <div className="space-y-1">
+                        <label className="text-xs font-bold text-slate-700 uppercase">Category Image</label>
+                        <div className="flex gap-2">
+                          <input 
+                            className="flex-1 px-4 py-3 rounded-xl border border-slate-200 outline-none focus:ring-2 focus:ring-orange-500"
+                            placeholder="Image URL"
+                            value={categoryForm.image_url}
+                            onChange={(e) => setCategoryForm({...categoryForm, image_url: e.target.value})}
+                          />
+                          <label className="cursor-pointer bg-slate-100 hover:bg-slate-200 px-4 py-3 rounded-xl border border-slate-200 flex items-center justify-center transition-colors">
+                            <Plus className="h-5 w-5 text-slate-600" />
+                            <input 
+                              type="file" 
+                              className="hidden" 
+                              accept="image/*"
+                              onChange={async (e) => {
+                                const file = e.target.files?.[0];
+                                if (file) {
+                                  const loadingToast = toast.loading('Uploading image...');
+                                  try {
+                                    const url = await uploadImage(file);
+                                    setCategoryForm({...categoryForm, image_url: url});
+                                    toast.success('Image uploaded successfully', { id: loadingToast });
+                                  } catch (err) {
+                                    console.error(err);
+                                    toast.error('Failed to upload image', { id: loadingToast });
+                                  }
+                                }
+                              }}
+                            />
+                          </label>
+                        </div>
                       </div>
 
                       <button 

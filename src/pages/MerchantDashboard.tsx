@@ -15,7 +15,7 @@ import {
   Sparkles,
   Loader2
 } from 'lucide-react';
-import { supabase } from '../lib/supabase';
+import { supabase, uploadImage } from '../lib/supabase';
 import { Product, Category, Profile, OrderItem, Payout } from '../types';
 import toast from 'react-hot-toast';
 import { format } from 'date-fns';
@@ -775,13 +775,38 @@ export default function MerchantDashboard() {
                       </button>
                     )}
                   </div>
-                  <input
-                    required
-                    type="url"
-                    value={newProduct.image_url}
-                    onChange={(e) => setNewProduct({...newProduct, image_url: e.target.value})}
-                    className="w-full px-4 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-emerald-500 outline-none"
-                  />
+                  <div className="flex gap-2">
+                    <input
+                      required
+                      type="url"
+                      placeholder="Image URL"
+                      value={newProduct.image_url}
+                      onChange={(e) => setNewProduct({...newProduct, image_url: e.target.value})}
+                      className="flex-1 px-4 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-emerald-500 outline-none"
+                    />
+                    <label className="cursor-pointer bg-gray-100 hover:bg-gray-200 px-4 py-2 rounded-lg border border-gray-200 flex items-center justify-center transition-colors">
+                      <Plus className="h-5 w-5 text-gray-600" />
+                      <input 
+                        type="file" 
+                        className="hidden" 
+                        accept="image/*"
+                        onChange={async (e) => {
+                          const file = e.target.files?.[0];
+                          if (file) {
+                            const loadingToast = toast.loading('Uploading image...');
+                            try {
+                              const url = await uploadImage(file);
+                              setNewProduct({...newProduct, image_url: url});
+                              toast.success('Image uploaded successfully', { id: loadingToast });
+                            } catch (err) {
+                              console.error(err);
+                              toast.error('Failed to upload image', { id: loadingToast });
+                            }
+                          }
+                        }}
+                      />
+                    </label>
+                  </div>
                 </div>
               </div>
 

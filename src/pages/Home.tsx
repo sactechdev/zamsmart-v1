@@ -200,12 +200,21 @@ export const Home: React.FC = () => {
               to={`/category/${cat.slug}`}
               className="bg-white p-6 rounded-2xl border border-slate-100 shadow-sm hover:shadow-md hover:border-orange-200 transition-all text-center group"
             >
-              <div className="w-16 h-16 bg-slate-50 rounded-full mx-auto mb-4 flex items-center justify-center group-hover:bg-orange-50 transition-colors">
-                <img 
-                  src={`https://api.dicebear.com/7.x/initials/svg?seed=${cat.name}&backgroundColor=f8fafc`} 
-                  alt={cat.name} 
-                  className="w-10 h-10"
-                />
+              <div className="w-16 h-16 bg-slate-50 rounded-full mx-auto mb-4 flex items-center justify-center group-hover:bg-orange-50 transition-colors overflow-hidden">
+                {cat.image_url ? (
+                  <img 
+                    src={cat.image_url} 
+                    alt={cat.name} 
+                    className="w-full h-full object-cover"
+                    referrerPolicy="no-referrer"
+                  />
+                ) : (
+                  <img 
+                    src={`https://api.dicebear.com/7.x/initials/svg?seed=${cat.name}&backgroundColor=f8fafc`} 
+                    alt={cat.name} 
+                    className="w-10 h-10"
+                  />
+                )}
               </div>
               <span className="text-sm font-bold text-slate-900 group-hover:text-orange-600 transition-colors">{cat.name}</span>
             </Link>
