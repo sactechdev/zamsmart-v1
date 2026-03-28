@@ -38,6 +38,28 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
 
+-- Function to check if user is order owner without recursion
+CREATE OR REPLACE FUNCTION public.is_order_owner(order_id UUID)
+RETURNS BOOLEAN AS $$
+BEGIN
+  RETURN EXISTS (
+    SELECT 1 FROM public.orders
+    WHERE id = $1 AND user_id = auth.uid()
+  );
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+
+-- Function to check if user is order merchant without recursion
+CREATE OR REPLACE FUNCTION public.is_order_merchant(order_id UUID)
+RETURNS BOOLEAN AS $$
+BEGIN
+  RETURN EXISTS (
+    SELECT 1 FROM public.order_items
+    WHERE order_id = $1 AND merchant_id = auth.uid()
+  );
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+
 -- 2. Categories Table
 CREATE TABLE IF NOT EXISTS categories (
   id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
@@ -83,6 +105,9 @@ CREATE TABLE IF NOT EXISTS orders (
   id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
   user_id UUID REFERENCES auth.users ON DELETE SET NULL,
   total_amount NUMERIC NOT NULL,
+  shipping_fee NUMERIC DEFAULT 0,
+  shipping_zone TEXT,
+  estimated_delivery_days TEXT,
   status TEXT DEFAULT 'Pending Payment Review' CHECK (status IN ('Pending Payment Review', 'Processing', 'Shipped', 'Delivered', 'Cancelled')),
   full_name TEXT NOT NULL,
   phone TEXT NOT NULL,
@@ -172,7 +197,7 @@ DROP POLICY IF EXISTS "Users can view own orders" ON orders;
 CREATE POLICY "Users can view own orders" ON orders FOR SELECT USING (
   auth.uid() = user_id OR 
   public.check_is_admin() OR
-  EXISTS (SELECT 1 FROM order_items WHERE order_id = orders.id AND merchant_id = auth.uid())
+  public.is_order_merchant(id)
 );
 
 DROP POLICY IF EXISTS "Anyone can create orders" ON orders;
@@ -184,7 +209,8 @@ CREATE POLICY "Admins can manage all orders" ON orders FOR ALL USING (public.che
 -- Order Items: Customers can view own, merchants can view own, admins can view all
 DROP POLICY IF EXISTS "Users can view own order items" ON order_items;
 CREATE POLICY "Users can view own order items" ON order_items FOR SELECT USING (
-  EXISTS (SELECT 1 FROM orders WHERE id = order_items.order_id AND (user_id = auth.uid() OR public.check_is_admin())) OR
+  public.is_order_owner(order_id) OR
+  public.check_is_admin() OR
   merchant_id = auth.uid()
 );
 
