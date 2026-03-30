@@ -9,10 +9,25 @@
       window.$chatbot = {
         id: "cbca08ef-f4e8-402a-8c57-045cd9bd9e80",
         color: "#f97316",
-        position: "bottom-right"
+        position: "bottom-right",
+        offset: {
+          top: 100,
+          bottom: 20
+        },
+        zIndex: 40
       };
     </script>
     <script src="https://www.chatbotstudio.dev/embed.js" async></script>
+    <style>
+      /* Ensure the chatbot window doesn't overlap with the sticky header */
+      #chatbot-studio-container, 
+      .chatbot-studio-window,
+      iframe[src*="chatbotstudio.dev"] {
+        top: 80px !important; /* Height of the sticky header */
+        max-height: calc(100vh - 100px) !important;
+        z-index: 40 !important; /* Below the header (z-50) */
+      }
+    </style>
   </head>
   <body>
     <div id="root"></div>
