@@ -1,5 +1,5 @@
 {
   "name": "ZAMS Mart-v1",
-  "description": "A modern e-commerce platform for Nigeria with bank transfer payments and admin dashboard.",
+  "description": "A modern e-commerce platform for Nigeria with bank transfer payments, admin dashboard, and an integrated customer support chatbot.",
   "requestFramePermissions": []
 }

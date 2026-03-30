@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { supabase, uploadImage } from '../lib/supabase';
-import { Order, Product, Category, PaymentProof, Profile, Payout } from '../types';
+import { Order, Product, Category, PaymentProof, Profile, Payout, ShippingZone, ShippingState, ShippingRate } from '../types';
 import { 
   LayoutDashboard, ShoppingBag, Package, List, Users, 
   TrendingUp, Clock, CheckCircle, XCircle, Eye, 
@@ -1573,6 +1573,7 @@ export const AdminDashboard: React.FC = () => {
                                         if (error) toast.error(error.message);
                                         else {
                                           toast.success('Rate updated!');
+                                          setShippingRates(prev => prev.map(r => r.id === rate.id ? { ...r, base_fee: Number(newFee) } : r));
                                           fetchData();
                                         }
                                       }
@@ -1619,6 +1620,7 @@ export const AdminDashboard: React.FC = () => {
                                 if (error) toast.error(error.message);
                                 else {
                                   toast.success('State zone updated!');
+                                  setShippingStates(prev => prev.map(s => s.id === state.id ? { ...s, zone_id: newZone.id, shipping_zones: newZone } : s));
                                   fetchData();
                                 }
                               } else if (newZoneName) {

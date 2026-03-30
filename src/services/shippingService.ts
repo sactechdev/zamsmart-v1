@@ -33,7 +33,14 @@ export async function calculateShipping(input: ShippingCalculationInput): Promis
       return fallbackResult();
     }
 
-    const zone = stateData.shipping_zones;
+    const zone = Array.isArray(stateData.shipping_zones) 
+      ? stateData.shipping_zones[0] 
+      : stateData.shipping_zones;
+
+    if (!zone) {
+      return fallbackResult();
+    }
+
     const zoneId = stateData.zone_id;
 
     // 2. Fetch all products in the cart to get weights and dimensions
